@@ -161,14 +161,17 @@ static void drawCube (GLfloat fSize)
 }
 
 
-static void readFloats(int n, char * buf, float * data) {
+static int readFloats(int n, char * buf, float * data) {
 	for(int i = 0; i < n; i++) {
 		char * next;
 		data[i] = strtof(buf, &next);
-		if(next == buf)
+		if(next == buf) {
 			printf("warning invalid float input: %s, setting to 0\n",buf);
+			return 0;
+		}
 		buf = next;
 	}
+	return 1;
 }
 // ===================================
 
@@ -599,7 +602,17 @@ static void readFloats(int n, char * buf, float * data) {
 
 	//drawCube (1.5f); // draw scene
 	[frame_lock lock];
-    Frame_draw(frame);
+	BBox bounds;
+	Frame_getBBox(frame, &bounds);
+	float diag = BBox_diagonal_length(&bounds);
+	if(diag == 0.f)
+		diag = 1.f;
+	float center[3];
+	BBox_center(&bounds, center);
+	float scale = 1.f/diag * 5.f;
+	glScalef(scale, scale, scale);
+	glTranslatef(-center[0],-center[1],-center[2]);
+	Frame_draw(frame,&bounds);
 	[frame_lock unlock];
 	if (fInfo)
 		[self drawInfo];
@@ -660,40 +673,63 @@ msgTime	= getElapsedTime ();
 	}
 }
 - (void) refreshOnMain {
-	NSLog(@"DISPLAY");
 	[self setNeedsDisplay:YES];
+}
+- (void) newFrame {
+	[frame_lock lock];
+	Frame_free(frame);
+	frame = Frame_init();
+	[frame_lock unlock];
 }
 - (void) readFIFO {
 	if(![[NSFileManager defaultManager] fileExistsAtPath:@"/tmp/vdb"]) {
 		mkfifo("/tmp/vdb", 0666);
 	}
-	fifo_file = fopen("/tmp/vdb", "r");
-	if(!fifo_file)
-		perror("vdb");
-	char buf[4096];
-	float data[9];
-	while(fgets(buf,4096,fifo_file)) {
-		[frame_lock lock];
-		switch(buf[0]) {
-			case 'p':
-				readFloats(3, buf+1, data);
-				Frame_addPoint(frame, data);
-				break;
-			case 't':
-				readFloats(9, buf+1, data);
-				Frame_addTriangle(frame, data);
-				break;
-			case 'c':
-				readFloats(3, buf+1, data);
-				Frame_setColor3(frame, data);
-				break;
-			case 'l':
-				readFloats(6, buf+1, data);
-				Frame_addLine(frame, data);
-				break;
+	while(1) {
+		fifo_file = fopen("/tmp/vdb", "r");
+		if(!fifo_file)
+			perror("vdb");
+		char buf[4096];
+		float data[9];
+		while(fgets(buf,4096,fifo_file)) {
+			[frame_lock lock];
+			switch(buf[0]) {
+				case 'p':
+					if(readFloats(3, buf+1, data)) {
+						Frame_addPoint(frame, data);
+					}
+					break;
+				case 't':
+					if(readFloats(9, buf+1, data)) {
+						Frame_addTriangle(frame, data);
+					}
+					break;
+				case 'c':
+					if(readFloats(3, buf+1, data)) {
+						Frame_setColor3(frame, data);
+					}
+					break;
+				case 'l':
+					if(readFloats(6, buf+1, data)) {
+						Frame_addLine(frame, data);
+					}
+					break;
+				case 'n':
+					if(readFloats(6, buf+1, data)) {
+						Frame_addNormal(frame, data);
+					}
+					break;
+				case 'f':
+					[self performSelectorOnMainThread:@selector(newFrame) withObject:nil waitUntilDone:NO ];
+					break;
+				default:
+					printf("ignoring unknown command: %c\n",buf[0]);
+													
+			}
+			[frame_lock unlock];
+			[self performSelectorOnMainThread:@selector(refreshOnMain) withObject:nil waitUntilDone:NO ];
 		}
-		[frame_lock unlock];
-		[self performSelectorOnMainThread:@selector(refreshOnMain) withObject:nil waitUntilDone:NO ];
+		fclose(fifo_file);
 	}
 }
 
