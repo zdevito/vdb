@@ -720,14 +720,17 @@ msgTime	= getElapsedTime ();
 					}
 					break;
 				case 'f':
-					[self performSelectorOnMainThread:@selector(newFrame) withObject:nil waitUntilDone:NO ];
+					[frame_lock unlock];
+					[self performSelectorOnMainThread:@selector(newFrame) withObject:nil waitUntilDone:YES ];
+					[frame_lock lock];
+					break;
+				case 'r':
+					[self performSelectorOnMainThread:@selector(refreshOnMain) withObject:nil waitUntilDone:NO ];
 					break;
 				default:
 					printf("ignoring unknown command: %c\n",buf[0]);
-													
 			}
 			[frame_lock unlock];
-			[self performSelectorOnMainThread:@selector(refreshOnMain) withObject:nil waitUntilDone:NO ];
 		}
 		fclose(fifo_file);
 	}
