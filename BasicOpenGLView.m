@@ -602,17 +602,24 @@ static int readFloats(int n, char * buf, float * data) {
 
 	//drawCube (1.5f); // draw scene
 	[frame_lock lock];
-	BBox bounds;
-	Frame_getBBox(frame, &bounds);
-	float diag = BBox_diagonal_length(&bounds);
+	
+	
+	if(refresh_posted) {
+		Frame_getBBox(frame,&current_bounds);
+		Frame_refresh(frame,&current_bounds);
+		refresh_posted = 0;
+	}
+
+	float diag = BBox_diagonal_length(&current_bounds);
 	if(diag == 0.f)
 		diag = 1.f;
 	float center[3];
-	BBox_center(&bounds, center);
+	BBox_center(&current_bounds, center);
 	float scale = 1.f/diag * 5.f;
 	glScalef(scale, scale, scale);
 	glTranslatef(-center[0],-center[1],-center[2]);
-	Frame_draw(frame,&bounds);
+	Frame_draw(frame);
+	
 	[frame_lock unlock];
 	if (fInfo)
 		[self drawInfo];
@@ -673,12 +680,12 @@ msgTime	= getElapsedTime ();
 	}
 }
 - (void) refreshOnMain {
+	refresh_posted = 1;
 	[self setNeedsDisplay:YES];
 }
 - (void) newFrame {
 	[frame_lock lock];
-	Frame_free(frame);
-	frame = Frame_init();
+	Frame_clear(frame);
 	[frame_lock unlock];
 }
 - (void) readFIFO {
@@ -773,6 +780,7 @@ msgTime	= getElapsedTime ();
 {
 	// set start values...
 	fInfo = 1;
+	refresh_posted = 1;
 	gStartTime = CFAbsoluteTimeGetCurrent ();
 	
 }

@@ -73,6 +73,7 @@ struct Point {
 struct DisplayBuffer {
 	std::vector<unsigned short> idx;
 	std::vector<Point> pts;
+	size_t n_elements_in_draw_list;
 	bool dirty;
 	GLuint vbo;
 	GLuint ibo;
@@ -80,8 +81,10 @@ struct DisplayBuffer {
 		dirty = true;
 		glGenBuffers(1,&vbo);
 		glGenBuffers(1,&ibo);
+		n_elements_in_draw_list = 0;
 	}
-	void draw(GLenum mode) {
+	
+	void refresh() {
 		if(dirty) {
 			glDeleteBuffers(1,&vbo);
 			glDeleteBuffers(1,&ibo);
@@ -92,16 +95,18 @@ struct DisplayBuffer {
 			
 			glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * pts.size(), &pts[0], GL_STATIC_DRAW);
 			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * idx.size(), &idx[0], GL_STATIC_DRAW);
+			n_elements_in_draw_list = idx.size();
 			dirty = false;
-		} else {
-			glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 		}
+	}
+	void draw(GLenum mode) {
+		glBindBuffer(GL_ARRAY_BUFFER, vbo);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 		glEnableClientState(GL_VERTEX_ARRAY);
 		glEnableClientState(GL_COLOR_ARRAY);
 		glVertexPointer(3, GL_FLOAT, sizeof(Point), OFFSET(Point,x));
 		glColorPointer(3, GL_FLOAT, sizeof(Point), OFFSET(Point,r));
-		glDrawElements(mode, idx.size(), GL_UNSIGNED_SHORT, NULL);
+		glDrawElements(mode, n_elements_in_draw_list, GL_UNSIGNED_SHORT, NULL);
 	}
 	void addIndex() {
 		dirty = true;
@@ -114,6 +119,11 @@ struct DisplayBuffer {
 	void addPoint(Point * p) {
 		dirty = true;
 		pts.push_back(*p);
+	}
+	void clear() {
+		dirty = true;
+		pts.clear();
+		idx.clear();
 	}
 	void destroy() {
 		glDeleteBuffers(1,&vbo);
@@ -163,8 +173,7 @@ extern "C" {
 		f->last_diag = 1.f;
 		return f;
 	}
-	void Frame_draw(Frame * f, BBox * draw_box) {
-		
+	void Frame_refresh(Frame * f, BBox * draw_box) {
 		float diag = BBox_diagonal_length(draw_box);
 		if(f->last_diag != diag || f->normals_dirty) {
 			
@@ -186,7 +195,18 @@ extern "C" {
 			}
 			f->last_diag = diag;
 		}
-		
+		f->tris.refresh();
+		f->lines.refresh();
+		f->points.refresh();
+	}
+	void Frame_clear(Frame * f) {
+		f->normals_dirty = false;
+		f->normals.clear();
+		f->tris.clear();
+		f->lines.clear();
+		f->points.clear();
+	}
+	void Frame_draw(Frame * f) {
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
 		glPointSize(5.f);

@@ -26,12 +26,15 @@ float BBox_diagonal_length(BBox * b);
 bool BBox_center(BBox * b, float * r);
 typedef struct Frame Frame;
 Frame * Frame_init();
-void Frame_draw(Frame * f, BBox * b);
+void Frame_draw(Frame * f);
+void Frame_refresh(Frame * f, BBox * b);
+void Frame_clear(Frame * f);
 void Frame_setColor3(Frame * f, float * r);
 void Frame_addTriangle(Frame * f, float * data); // (x,y,z) x 3
 void Frame_addLine(Frame * f, float * data); // (x,y,z) x 2
 void Frame_addPoint(Frame * f, float * data); //(x,y,z) x 1
 void Frame_addNormal(Frame * f, float * data);
+
 void Frame_free(Frame * f);
 void Frame_getBBox(Frame * f, BBox * b);
 

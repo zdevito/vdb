@@ -93,6 +93,9 @@ typedef struct {
 	NSThread * reader;
 	NSLock * frame_lock;
 	FILE * fifo_file;
+	
+	BBox current_bounds;
+	bool refresh_posted;
 }
 
 + (NSOpenGLPixelFormat*) basicPixelFormat;
