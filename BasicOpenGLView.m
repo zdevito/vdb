@@ -273,11 +273,6 @@ static int readFloats(int n, char * buf, float * data) {
 }
 
 -(IBAction) updateFrameInfo: (id) foo {
-	[frame_lock lock];
-	
-	Frame_setVisibleRange(frame, 0, Frame_nObjects(frame) * [filter doubleValue]);
-	
-	[frame_lock unlock];
 	[self setNeedsDisplay:YES];
 }
 // ---------------------------------
@@ -611,11 +606,15 @@ static int readFloats(int n, char * buf, float * data) {
 	//drawCube (1.5f); // draw scene
 	[frame_lock lock];
 	
-	
+	Frame_setVisibleRange(frame, 0, Frame_nObjects(frame) * [filter doubleValue]);
 	if(refresh_posted) {
 		Frame_getBBox(frame,&current_bounds);
 		Frame_refresh(frame,&current_bounds);
+		[screen_refresh lock];
 		refresh_posted = 0;
+		[screen_refresh signal];
+		[screen_refresh unlock];
+		
 	}
 
 	float diag = BBox_diagonal_length(&current_bounds);
@@ -629,8 +628,8 @@ static int readFloats(int n, char * buf, float * data) {
 	Frame_draw(frame, [point_size intValue]);
 	
 	[frame_lock unlock];
-	if (fInfo)
-		[self drawInfo];
+	//if (fInfo)
+	//	[self drawInfo];
 		
 	[[self openGLContext] flushBuffer];
 	glReportError ();
@@ -641,12 +640,7 @@ static int readFloats(int n, char * buf, float * data) {
 // set initial OpenGL state (current context is set)
 // called after context is created
 - (void) prepareOpenGL
-{
-    long swapInt = 1;
-
-    [[self openGLContext] setValues:&swapInt forParameter:NSOpenGLCPSwapInterval]; // set to vbl sync
-
-	// init GL stuff here
+{	// init GL stuff here
 	glEnable(GL_DEPTH_TEST);
 
 	glShadeModel(GL_SMOOTH);    
@@ -672,6 +666,7 @@ static int readFloats(int n, char * buf, float * data) {
 	
 	reader = [[NSThread alloc] initWithTarget:self selector:@selector(readFIFO) object:nil];
 	frame_lock = [[NSLock alloc] init];
+	screen_refresh = [[NSCondition alloc] init];
 	[reader start];
 }
 // ---------------------------------
@@ -692,6 +687,7 @@ msgTime	= getElapsedTime ();
 	[self setNeedsDisplay:YES];
 }
 - (void) newFrame {
+	//we need to force a draw to happen _NOW_ otherwise we might draw a blank frame...
 	[frame_lock lock];
 	Frame_clear(frame);
 	[frame_lock unlock];
@@ -736,6 +732,14 @@ msgTime	= getElapsedTime ();
 					break;
 				case 'f':
 					[frame_lock unlock];
+					
+					//wait until screen refresh has been posted
+					[screen_refresh lock];
+					while(refresh_posted) {
+						[screen_refresh wait];
+					}
+					[screen_refresh unlock];
+					
 					[self performSelectorOnMainThread:@selector(newFrame) withObject:nil waitUntilDone:YES ];
 					[frame_lock lock];
 					break;
@@ -791,11 +795,10 @@ msgTime	= getElapsedTime ();
 {
 	// set start values...
 	fInfo = 1;
-	refresh_posted = 1;
 	gStartTime = CFAbsoluteTimeGetCurrent ();
 	[filter setContinuous:YES];
 	[point_size setContinuous:YES];
-	
+	refresh_posted = 0;
 }
 
 

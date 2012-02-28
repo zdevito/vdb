@@ -93,6 +93,7 @@ typedef struct {
 	Frame * frame;
 	NSThread * reader;
 	NSLock * frame_lock;
+	NSCondition * screen_refresh;
 	FILE * fifo_file;
 	
 	BBox current_bounds;
