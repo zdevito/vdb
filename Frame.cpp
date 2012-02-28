@@ -62,6 +62,7 @@ bool BBox_center(BBox * b, float * r) {
 	r[0] = (b->x0 + b->x1) / 2.f;
 	r[1] = (b->y0 + b->y1) / 2.f;
 	r[2] = (b->z0 + b->z1) / 2.f;
+	return false;
 }
 struct Point {
 	float x,y,z;
@@ -71,42 +72,53 @@ struct Point {
 #define OFFSET(typ,field) (&((typ*)NULL)->field)
 
 struct DisplayBuffer {
-	std::vector<unsigned short> idx;
+	std::vector<unsigned int> idx;
 	std::vector<Point> pts;
 	size_t n_elements_in_draw_list;
 	bool dirty;
+	bool has_buffers;
 	GLuint vbo;
 	GLuint ibo;
 	void init() {
 		dirty = true;
-		glGenBuffers(1,&vbo);
-		glGenBuffers(1,&ibo);
+		has_buffers = false;
 		n_elements_in_draw_list = 0;
 	}
 	
 	void refresh() {
 		if(dirty) {
-			glDeleteBuffers(1,&vbo);
-			glDeleteBuffers(1,&ibo);
+			if(has_buffers) {
+				glDeleteBuffers(1,&vbo);
+				glDeleteBuffers(1,&ibo);
+			}
+			has_buffers = true;
 			glGenBuffers(1,&vbo);
 			glGenBuffers(1,&ibo);
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 			
 			glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * pts.size(), &pts[0], GL_STATIC_DRAW);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned short) * idx.size(), &idx[0], GL_STATIC_DRAW);
+			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * idx.size(), &idx[0], GL_STATIC_DRAW);
 			n_elements_in_draw_list = idx.size();
 			dirty = false;
 		}
 	}
-	void draw(GLenum mode) {
-		glBindBuffer(GL_ARRAY_BUFFER, vbo);
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-		glEnableClientState(GL_VERTEX_ARRAY);
-		glEnableClientState(GL_COLOR_ARRAY);
-		glVertexPointer(3, GL_FLOAT, sizeof(Point), OFFSET(Point,x));
-		glColorPointer(3, GL_FLOAT, sizeof(Point), OFFSET(Point,r));
-		glDrawElements(mode, n_elements_in_draw_list, GL_UNSIGNED_SHORT, NULL);
+	void draw(GLenum mode, size_t begin, size_t end_) {
+		size_t end = std::min(end_,n_elements_in_draw_list);
+		if(begin < end) {
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_COLOR_ARRAY);
+			glVertexPointer(3, GL_FLOAT, sizeof(Point), begin * sizeof(Point) + OFFSET(Point,x));
+			glColorPointer(3, GL_FLOAT, sizeof(Point),  begin * sizeof(Point) + OFFSET(Point,r));
+			glDrawElements(mode, end - begin, GL_UNSIGNED_INT, NULL);
+		}
+	}
+	void clear() {
+		dirty = true;
+		pts.clear();
+		idx.clear();
 	}
 	void addIndex() {
 		dirty = true;
@@ -120,11 +132,6 @@ struct DisplayBuffer {
 		dirty = true;
 		pts.push_back(*p);
 	}
-	void clear() {
-		dirty = true;
-		pts.clear();
-		idx.clear();
-	}
 	void destroy() {
 		glDeleteBuffers(1,&vbo);
 		glDeleteBuffers(1,&ibo);
@@ -134,6 +141,13 @@ struct Normal {
 	size_t line_idx; //index into lines list where the first point describing this normal lives
 	size_t point_idx; //index into poitns list where point for normal is
 };
+
+struct Sizes {
+	size_t n_tri;
+	size_t n_lines;
+	size_t n_points;
+};
+
 struct Frame {
 	DisplayBuffer tris;
 	DisplayBuffer lines;
@@ -143,6 +157,9 @@ struct Frame {
 	float last_diag;
 	bool normals_dirty;
 	std::vector<Normal> normals;
+	std::vector<Sizes> history;
+	size_t low,high;
+	float line_size,point_size;
 };
 static void Frame_initPoint(Frame * f, float * data, Point * p) {
 	p->x = data[0];
@@ -161,16 +178,23 @@ static void Frame_addPoints(Frame * f, DisplayBuffer * buffer, int n, float * ps
 		BBox_add(&f->bounds,ps + i * 3,&f->bounds);
 	}
 }
+static void Frame_mark(Frame * f) {
+	Sizes s = { f->tris.idx.size(), f->lines.idx.size(), f->points.idx.size() };
+	f->history.push_back(s);
+}
 extern "C" {
 	Frame * Frame_init() {
 		Frame * f = new Frame;
+		f->point_size = 5.0;
+		f->line_size = 1.0;
+		
 		f->tris.init();
 		f->lines.init();
 		f->points.init();
 		f->r = f->g = f->b = .5f;
-		f->normals_dirty = false;
 		BBox_empty(&f->bounds);
 		f->last_diag = 1.f;
+		Frame_clear(f);
 		return f;
 	}
 	void Frame_refresh(Frame * f, BBox * draw_box) {
@@ -205,14 +229,23 @@ extern "C" {
 		f->tris.clear();
 		f->lines.clear();
 		f->points.clear();
+		f->history.clear();
+		f->low = 0;
+		f->high = INT_MAX;
+		Frame_mark(f);
 	}
-	void Frame_draw(Frame * f) {
+	void Frame_draw(Frame * f, float point_size) {
 		glMatrixMode(GL_MODELVIEW);
 		glPushMatrix();
-		glPointSize(5.f);
-		f->tris.draw(GL_TRIANGLES);
-		f->lines.draw(GL_LINES);
-		f->points.draw(GL_POINTS);
+		
+		Sizes & l = f->history[std::min(f->low,f->history.size() - 1)];
+		Sizes & h = f->history[std::min(f->high,f->history.size() - 1)];
+		
+		glPointSize(point_size);
+		f->tris.draw(GL_TRIANGLES,l.n_tri,h.n_tri);
+		f->lines.draw(GL_LINES,l.n_lines,h.n_lines);
+		f->points.draw(GL_POINTS,l.n_points,h.n_points);
+		
 		glPopMatrix();
 	}
 	void Frame_setColor3(Frame * f, float * r) {
@@ -220,14 +253,24 @@ extern "C" {
 		f->g = r[1];
 		f->b = r[2];
 	}
+	size_t Frame_nObjects(Frame * f) {
+		return f->history.size();
+	}
+	void Frame_setVisibleRange(Frame * f, size_t l, size_t h) {
+		f->low = l;
+		f->high = h;
+	}
 	void Frame_addTriangle(Frame * f, float * data){  // (x,y,z) x 3
 		Frame_addPoints(f,&f->tris,3,data);
+		Frame_mark(f);
 	}
 	void Frame_addLine(Frame * f, float * data) { // (x,y,z) x 2
 		Frame_addPoints(f,&f->lines,2,data);
+		Frame_mark(f);
 	}
 	void Frame_addPoint(Frame * f, float * data) { //(x,y,z) x 1
 		Frame_addPoints(f,&f->points,1,data);
+		Frame_mark(f);
 	}
 	void Frame_addNormal(Frame * f, float * data) { //ray of (x,y,z) (dx,dy,dz)
 		f->normals_dirty = true;
@@ -238,6 +281,7 @@ extern "C" {
 		f->normals.push_back(n);
 		Frame_addPoint(f, p + 3);
 		Frame_addLine(f, p);
+		Frame_mark(f);
 	}
 	void Frame_free(Frame * f) {
 		f->tris.destroy();

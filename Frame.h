@@ -9,6 +9,7 @@
 #ifndef _FRAME_H
 #define _FRAME_H
 
+#include <stddef.h>
 typedef struct BBox {
 	union {
 		float data[6];
@@ -26,7 +27,7 @@ float BBox_diagonal_length(BBox * b);
 bool BBox_center(BBox * b, float * r);
 typedef struct Frame Frame;
 Frame * Frame_init();
-void Frame_draw(Frame * f);
+void Frame_draw(Frame * f, float point_size);
 void Frame_refresh(Frame * f, BBox * b);
 void Frame_clear(Frame * f);
 void Frame_setColor3(Frame * f, float * r);
@@ -37,5 +38,6 @@ void Frame_addNormal(Frame * f, float * data);
 
 void Frame_free(Frame * f);
 void Frame_getBBox(Frame * f, BBox * b);
-
+size_t Frame_nObjects(Frame * f);
+void Frame_setVisibleRange(Frame * f, size_t l, size_t h);
 #endif

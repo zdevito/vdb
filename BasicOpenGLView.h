@@ -81,7 +81,8 @@ typedef struct {
 	
     bool fInfo;
 	IBOutlet NSMenuItem * infoMenuItem;
-	
+	IBOutlet NSSlider * point_size;
+	IBOutlet NSSlider * filter;
 	
 	// camera handling
 	recCamera camera;
@@ -111,7 +112,8 @@ typedef struct {
 - (void) drawInfo;
 
 -(IBAction) info: (id) sender;
-
+-(IBAction) updateFrameInfo: (id) foo;
+-(IBAction) clearView: (id) foo;
 - (void) mouseDown:(NSEvent *)theEvent;
 - (void) rightMouseDown:(NSEvent *)theEvent;
 - (void) otherMouseDown:(NSEvent *)theEvent;

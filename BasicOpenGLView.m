@@ -272,6 +272,14 @@ static int readFloats(int n, char * buf, float * data) {
 	}
 }
 
+-(IBAction) updateFrameInfo: (id) foo {
+	[frame_lock lock];
+	
+	Frame_setVisibleRange(frame, 0, Frame_nObjects(frame) * [filter doubleValue]);
+	
+	[frame_lock unlock];
+	[self setNeedsDisplay:YES];
+}
 // ---------------------------------
 
 // move camera in z axis
@@ -618,7 +626,7 @@ static int readFloats(int n, char * buf, float * data) {
 	float scale = 1.f/diag * 5.f;
 	glScalef(scale, scale, scale);
 	glTranslatef(-center[0],-center[1],-center[2]);
-	Frame_draw(frame);
+	Frame_draw(frame, [point_size intValue]);
 	
 	[frame_lock unlock];
 	if (fInfo)
@@ -742,7 +750,10 @@ msgTime	= getElapsedTime ();
 		fclose(fifo_file);
 	}
 }
-
+-(IBAction) clearView: (id) foo {
+	[self newFrame];
+	[self setNeedsDisplay:YES];
+}
 // ---------------------------------
 
 -(id) initWithFrame: (NSRect) frameRect
@@ -782,6 +793,8 @@ msgTime	= getElapsedTime ();
 	fInfo = 1;
 	refresh_posted = 1;
 	gStartTime = CFAbsoluteTimeGetCurrent ();
+	[filter setContinuous:YES];
+	[point_size setContinuous:YES];
 	
 }
 
