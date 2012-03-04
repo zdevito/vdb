@@ -7,11 +7,10 @@
  *
  */
 
-extern "C" {
 #include "Frame.h"
-}
 #include <vector.h>
-#include <OpenGL/OpenGL.h>
+#include <Fl/gl.h>
+#include <Fl/glu.h>
 #include <assert.h>
 #include <float.h>
 #include <math.h>
@@ -182,114 +181,112 @@ static void Frame_mark(Frame * f) {
 	Sizes s = { f->tris.idx.size(), f->lines.idx.size(), f->points.idx.size() };
 	f->history.push_back(s);
 }
-extern "C" {
-	Frame * Frame_init() {
-		Frame * f = new Frame;
-		f->point_size = 5.0;
-		f->line_size = 1.0;
+Frame * Frame_init() {
+	Frame * f = new Frame;
+	f->point_size = 5.0;
+	f->line_size = 1.0;
+	
+	f->tris.init();
+	f->lines.init();
+	f->points.init();
+	f->r = f->g = f->b = .5f;
+	BBox_empty(&f->bounds);
+	f->last_diag = 1.f;
+	Frame_clear(f);
+	return f;
+}
+void Frame_refresh(Frame * f, BBox * draw_box) {
+	float diag = BBox_diagonal_length(draw_box);
+	if(f->last_diag != diag || f->normals_dirty) {
 		
-		f->tris.init();
-		f->lines.init();
-		f->points.init();
-		f->r = f->g = f->b = .5f;
-		BBox_empty(&f->bounds);
-		f->last_diag = 1.f;
-		Frame_clear(f);
-		return f;
-	}
-	void Frame_refresh(Frame * f, BBox * draw_box) {
-		float diag = BBox_diagonal_length(draw_box);
-		if(f->last_diag != diag || f->normals_dirty) {
+		for(int i = 0; i < f->normals.size(); i++) {
+			Normal & n = f->normals[i];
+			Point * p = &f->lines.pts[n.line_idx];
+			float dx = p[1].x - p[0].x;
+			float dy = p[1].y - p[0].y;
+			float dz = p[1].z - p[0].z;
+			float l = sqrtf(dx * dx + dy * dy + dz * dz);
 			
-			for(int i = 0; i < f->normals.size(); i++) {
-				Normal & n = f->normals[i];
-				Point * p = &f->lines.pts[n.line_idx];
-				float dx = p[1].x - p[0].x;
-				float dy = p[1].y - p[0].y;
-				float dz = p[1].z - p[0].z;
-				float l = sqrtf(dx * dx + dy * dy + dz * dz);
-				
-				float s = 1.f/diag * .1 / l;
-				p[1].x = p[0].x + s * dx;
-				p[1].y = p[0].y + s * dy;
-				p[1].z = p[0].z + s * dz;
-				memcpy(&f->points.pts[n.point_idx].x, &p[1].x,sizeof(float) * 3);
-				f->lines.dirty = true;
-				f->points.dirty = true;
-			}
-			f->last_diag = diag;
+			float s = 1.f/diag * .1 / l;
+			p[1].x = p[0].x + s * dx;
+			p[1].y = p[0].y + s * dy;
+			p[1].z = p[0].z + s * dz;
+			memcpy(&f->points.pts[n.point_idx].x, &p[1].x,sizeof(float) * 3);
+			f->lines.dirty = true;
+			f->points.dirty = true;
 		}
-		f->tris.refresh();
-		f->lines.refresh();
-		f->points.refresh();
+		f->last_diag = diag;
 	}
-	void Frame_clear(Frame * f) {
-		f->normals_dirty = false;
-		f->normals.clear();
-		f->tris.clear();
-		f->lines.clear();
-		f->points.clear();
-		f->history.clear();
-		f->low = 0;
-		f->high = INT_MAX;
-		Frame_mark(f);
-	}
-	void Frame_draw(Frame * f, float point_size) {
-		glMatrixMode(GL_MODELVIEW);
-		glPushMatrix();
-		
-		Sizes & l = f->history[std::min(f->low,f->history.size() - 1)];
-		Sizes & h = f->history[std::min(f->high,f->history.size() - 1)];
-		
-		glPointSize(point_size);
-		f->tris.draw(GL_TRIANGLES,l.n_tri,h.n_tri);
-		f->lines.draw(GL_LINES,l.n_lines,h.n_lines);
-		f->points.draw(GL_POINTS,l.n_points,h.n_points);
-		
-		glPopMatrix();
-	}
-	void Frame_setColor3(Frame * f, float * r) {
-		f->r = r[0];
-		f->g = r[1];
-		f->b = r[2];
-	}
-	size_t Frame_nObjects(Frame * f) {
-		return f->history.size();
-	}
-	void Frame_setVisibleRange(Frame * f, size_t l, size_t h) {
-		f->low = l;
-		f->high = h;
-	}
-	void Frame_addTriangle(Frame * f, float * data){  // (x,y,z) x 3
-		Frame_addPoints(f,&f->tris,3,data);
-		Frame_mark(f);
-	}
-	void Frame_addLine(Frame * f, float * data) { // (x,y,z) x 2
-		Frame_addPoints(f,&f->lines,2,data);
-		Frame_mark(f);
-	}
-	void Frame_addPoint(Frame * f, float * data) { //(x,y,z) x 1
-		Frame_addPoints(f,&f->points,1,data);
-		Frame_mark(f);
-	}
-	void Frame_addNormal(Frame * f, float * data) { //ray of (x,y,z) (dx,dy,dz)
-		f->normals_dirty = true;
-		float p[6] = {data[0],data[1],data[2], data[0] + data[3],data[1] + data[4],data[2] + data[5]};
-		Normal n;
-		n.line_idx = f->lines.pts.size();
-		n.point_idx = f->points.pts.size();
-		f->normals.push_back(n);
-		Frame_addPoint(f, p + 3);
-		Frame_addLine(f, p);
-		Frame_mark(f);
-	}
-	void Frame_free(Frame * f) {
-		f->tris.destroy();
-		f->lines.destroy();
-		f->points.destroy();
-		delete f;
-	}
-	void Frame_getBBox(Frame * f, BBox * b) {
-		memcpy(b,&f->bounds,sizeof(BBox));
-	}
+	f->tris.refresh();
+	f->lines.refresh();
+	f->points.refresh();
+}
+void Frame_clear(Frame * f) {
+	f->normals_dirty = false;
+	f->normals.clear();
+	f->tris.clear();
+	f->lines.clear();
+	f->points.clear();
+	f->history.clear();
+	f->low = 0;
+	f->high = INT_MAX;
+	Frame_mark(f);
+}
+void Frame_draw(Frame * f, float point_size) {
+	glMatrixMode(GL_MODELVIEW);
+	glPushMatrix();
+	
+	Sizes & l = f->history[std::min(f->low,f->history.size() - 1)];
+	Sizes & h = f->history[std::min(f->high,f->history.size() - 1)];
+	
+	glPointSize(point_size);
+	f->tris.draw(GL_TRIANGLES,l.n_tri,h.n_tri);
+	f->lines.draw(GL_LINES,l.n_lines,h.n_lines);
+	f->points.draw(GL_POINTS,l.n_points,h.n_points);
+	
+	glPopMatrix();
+}
+void Frame_setColor3(Frame * f, float * r) {
+	f->r = r[0];
+	f->g = r[1];
+	f->b = r[2];
+}
+size_t Frame_nObjects(Frame * f) {
+	return f->history.size();
+}
+void Frame_setVisibleRange(Frame * f, size_t l, size_t h) {
+	f->low = l;
+	f->high = h;
+}
+void Frame_addTriangle(Frame * f, float * data){  // (x,y,z) x 3
+	Frame_addPoints(f,&f->tris,3,data);
+	Frame_mark(f);
+}
+void Frame_addLine(Frame * f, float * data) { // (x,y,z) x 2
+	Frame_addPoints(f,&f->lines,2,data);
+	Frame_mark(f);
+}
+void Frame_addPoint(Frame * f, float * data) { //(x,y,z) x 1
+	Frame_addPoints(f,&f->points,1,data);
+	Frame_mark(f);
+}
+void Frame_addNormal(Frame * f, float * data) { //ray of (x,y,z) (dx,dy,dz)
+	f->normals_dirty = true;
+	float p[6] = {data[0],data[1],data[2], data[0] + data[3],data[1] + data[4],data[2] + data[5]};
+	Normal n;
+	n.line_idx = f->lines.pts.size();
+	n.point_idx = f->points.pts.size();
+	f->normals.push_back(n);
+	Frame_addPoint(f, p + 3);
+	Frame_addLine(f, p);
+	Frame_mark(f);
+}
+void Frame_free(Frame * f) {
+	f->tris.destroy();
+	f->lines.destroy();
+	f->points.destroy();
+	delete f;
+}
+void Frame_getBBox(Frame * f, BBox * b) {
+	memcpy(b,&f->bounds,sizeof(BBox));
 }

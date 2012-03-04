@@ -37,12 +37,12 @@ VDBWindow::VDBWindow() : Fl_Window(640,480,"vdb") {
 	Fl_Group * group = new Fl_Group(0,h()-50,w(),50);
 	
 	point_size = new Fl_Slider(10, h()-30, 160, 20, "Point Size");
-	setupSlider(point_size,0,1,1,this);
+	setupSlider(point_size,1,5,5,this);
 	filter_value = new Fl_Slider(170, h()-30, 160 , 20, "Filter");
-	setupSlider(filter_value,0,1,0,this);
-	slider_changed();
+	setupSlider(filter_value,0,1,1,this);
+	
 	clear_button = new Fl_Button(340, h() - 40, 40, 30, "Clear");
-	clear_button->callback(clear_wrapper,this);
+	clear_button->callback(clear_wrapper,gl);
 	makePretty(clear_button);
 	
 	makePretty(this);
