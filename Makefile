@@ -13,7 +13,12 @@ SRC = main.cpp VDBWindow.cpp SocketManager.cpp Frame.cpp trackball.cpp GLWindow.
 OBJS = $(SRC:.cpp=.o)
 EXECUTABLE = vdb
 
-all:	$(EXECUTABLE)
+
+.PHONY:	all purge clean examples
+all:	$(EXECUTABLE) examples
+examples:
+	make -C examples
+
 
 build/$(FLTK_TAR):
 	curl $(FLTK_URL) -o build/$(FLTK_TAR)
@@ -30,7 +35,8 @@ build/%.o:	src/%.cpp $(FLTK_CONFIG)
 $(EXECUTABLE):	$(addprefix build/, $(OBJS))
 	$(CXX) $(LFLAGS) $^ -o $@
 	
-clean:	
+clean:
+	make -C examples clean
 	rm -rf build/*.o build/*.d
 	rm -f $(EXECUTABLE)
 

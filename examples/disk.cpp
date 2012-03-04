@@ -1,4 +1,4 @@
-#include "../vdb.h"
+#include "vdb.h"
 #include <stdlib.h>
 #include <math.h>
 
