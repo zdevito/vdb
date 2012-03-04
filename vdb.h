@@ -109,12 +109,14 @@ VDB_CALL int vdb_print(char cmd, int N, int stride, int nelems, void * p) {
 
 VDB_CALL int vdb_begin() {
 	__vdb_in_group++;
+	return 0;
 }
 VDB_CALL int vdb_end() {
 	if(__vdb_in_group > 0)
 		__vdb_in_group--;
 	if(__vdb_in_group == 0)
 		vdb_flush();
+	return 0;
 }
 
 VDB_CALL int vdb_point(int N, void * p, int stride) {
