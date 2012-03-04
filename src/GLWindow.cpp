@@ -156,6 +156,7 @@ void GLWindow::resetCamera() {
 }
 void GLWindow::clear() {
     Frame_clear(frame);
+    refresh_posted = 1;
 	redraw();
 }
 
@@ -236,7 +237,7 @@ void GLWindow::scrollWheel(int x, int y, int delta_x, int delta_y) {
 	} else 
 #endif
 	{
-		float wheelDelta = delta_x + delta_y;
+		float wheelDelta = delta_x - delta_y;
 		if (wheelDelta) {
 			GLfloat deltaZ = wheelDelta * -camera.aperture / 200.0f;
 			camera.viewPos.z -= deltaZ;
