@@ -41,7 +41,7 @@ clean:
 	rm -f $(EXECUTABLE)
 
 purge: clean
-	rm -rf build/*
+	rm -rf build/* local/*
 
 # dependency rules
 DEPENDENCIES = $(patsubst %.cpp,build/%.d,$(SRC))
