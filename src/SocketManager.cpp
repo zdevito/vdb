@@ -23,7 +23,7 @@ static void * callback_data;
 static bool callbacks_paused;
 
 
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE (64 * 1024)
 struct Buffer {
 	Buffer(int fd_) {
 		start = end = 0;

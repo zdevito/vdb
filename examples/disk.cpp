@@ -7,7 +7,6 @@ double drand() {
 }
 
 int main() {
-	//vdb_batched(1);
 	vdb_color(1,0,1);
 	for(int i = 0; i < 100000; i++) {
 		double s0 = drand();
@@ -22,6 +21,5 @@ int main() {
 		r = sqrt(s0);
 		vdb_point(r * sin(t), r * cos(t), 2);
 	}
-	//vdb_flush();
 	return 0;
 }
