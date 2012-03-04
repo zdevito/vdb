@@ -21,7 +21,6 @@ VDB_CALL int vdb_color(float r, float g, float b);
 VDB_CALL int vdb_begin();
 VDB_CALL int vdb_end();
 
-VDB_CALL int vdb_batched(int enabled);
 VDB_CALL int vdb_flush();
 
 //create a new blank frame. Currently just clears the screen, but eventually the viewer may keep
@@ -52,7 +51,6 @@ VDB_CALL int vdb_sample(float p);
 
 //for simplicity all the implementation to interface with vdb is in this header, just include it in your project
 
-#include <arpa/inet.h>
 #include <stdarg.h>
 #ifndef _WIN32
 #include <unistd.h>
@@ -77,7 +75,6 @@ static struct {
 	int init_error; 
 	int in_group;
 	int sample_enabled;
-	int batched; //if true, we only issue sends when the buffer is full, even if refreshes are posted
 	int fd;
 	size_t n_bytes;
 	char buffer[VDB_BUFFER_SIZE];
@@ -105,7 +102,7 @@ VDB_CALL int vdb_init() {
 		} else {
 			struct sockaddr_in serv_name;
 			serv_name.sin_family = AF_INET;
-			inet_aton("127.0.0.1",&serv_name.sin_addr);
+			serv_name.sin_addr.s_addr = htonl(0x7F000001L);
 			serv_name.sin_port = htons(10000);
 			if(-1 == connect(__vdb.fd, (struct sockaddr*) &serv_name, sizeof(serv_name))) {
 				perror("vdb");
@@ -135,25 +132,14 @@ void vdb_raw_print(const char * fmt, ...) {
 	va_end(argp);
 	if(__vdb.buffer[__vdb.n_bytes-1] == '\n' &&
 	   VDB_BUFFER_SIZE - __vdb.n_bytes < VDB_REDZONE_SIZE) {
-		if(__vdb.batched == 2) {
-			__vdb.batched = 1;
-			//we suppressed refresh meshes until the buffer was full, now we need to insert one
-			//flush will be called on the recursion
-			vdb_raw_print("r\n");
-		} else {
-			vdb_flush();
-		}
+		vdb_flush();
 	}
 }
 
 VDB_CALL int vdb_refresh() {
 	VDB_INIT;
-	if(!__vdb.batched) {
-		vdb_raw_print("r\n");
-		vdb_flush();
-	} else {
-		__vdb.batched = 2;
-	}
+	vdb_raw_print("r\n");
+	vdb_flush();
 	return 0;
 }
 
@@ -174,10 +160,6 @@ VDB_CALL int vdb_print(char cmd, int N, int stride, int nelems, void * p) {
 	if(__vdb.in_group == 0)
 		vdb_refresh(); //statements not between calls to vdb_begin() and vdb_end() are flushed immediately
 	return 0;	
-}
-
-VDB_CALL int vdb_batched(int enabled) {
-	__vdb.batched = enabled;
 }
 
 

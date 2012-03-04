@@ -22,6 +22,7 @@ static SocketManagerCallback_t callback_fn;
 static void * callback_data;
 static bool callbacks_paused;
 
+#define LOCALHOST_IP (0x7F000001L)
 
 #define BUFFER_SIZE (64 * 1024)
 struct Buffer {
@@ -120,9 +121,13 @@ static void new_connection(int fd, void * data) {
     	report_error("accept");
     	exit(1);
     }
-    Buffer * buf = new Buffer(sock2);
-    buffers.push_back(buf);
-    Fl::add_fd(sock2, FL_READ, input_handler, buf);
+    if(peer_name.sin_addr.s_addr != htonl(LOCALHOST_IP)) {
+    	close(sock2);
+    } else {
+    	Buffer * buf = new Buffer(sock2);
+    	buffers.push_back(buf);
+    	Fl::add_fd(sock2, FL_READ, input_handler, buf);
+    }
 }
 
 
