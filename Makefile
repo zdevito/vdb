@@ -6,10 +6,10 @@ FLTK_URL = http://ftp.easysw.com/pub/fltk/1.3.0/$(FLTK_TAR)
 FLTK_DIR = build/fltk-1.3.0
 
 CXX = clang++
-FLAGS = $(shell $(FLTK_CONFIG) --use-gl --cxxflags)
+FLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --cxxflags)
 LFLAGS = $(shell $(FLTK_CONFIG) --use-gl --ldstaticflags)
 
-SRC = main.cpp
+SRC = main.cpp VDBWindow.cpp SocketManager.cpp Frame.cpp trackball.cpp GLWindow.cpp
 OBJS = $(SRC:.cpp=.o)
 EXECUTABLE = vdb
 
@@ -28,7 +28,7 @@ build/%.o:	src/%.cpp $(FLTK_CONFIG)
 	$(CXX) $(FLAGS) $< -c -o $@
 
 $(EXECUTABLE):	$(addprefix build/, $(OBJS))
-	$(CXX) $(LFLAGS) $< -o $@
+	$(CXX) $(LFLAGS) $^ -o $@
 	
 clean:	
 	rm -rf build/*.o build/*.d
