@@ -2,9 +2,16 @@
 #include <stdlib.h>
 #include <math.h>
 
+
 double drand() {
+#ifdef __APPLE__
 	return 2.0 * arc4random() / (double) (0xFFFFFFFF) - 1;
+#else
+	return 2.0 * rand() / (double) (RAND_MAX);
+#endif
 }
+
+
 
 int main() {
 	for(int i = 0; i < 10000; i++) {

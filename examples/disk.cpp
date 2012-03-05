@@ -3,8 +3,13 @@
 #include <math.h>
 
 double drand() {
-	return arc4random() / (double) (0xFFFFFFFF);
+#ifdef __APPLE__
+	return 2.0 * arc4random() / (double) (0xFFFFFFFF) - 1;
+#else
+	return 2.0 * rand() / (double) (RAND_MAX);
+#endif
 }
+
 
 int main() {
 	vdb_color(1,0,1);

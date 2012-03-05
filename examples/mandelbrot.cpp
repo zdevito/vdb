@@ -49,8 +49,13 @@ static int mandel(double c_re, double c_im, int count) {
 }
 
 double drand() {
-	return arc4random() / (double) (0xFFFFFFFF);
+#ifdef __APPLE__
+	return 2.0 * arc4random() / (double) (0xFFFFFFFF) - 1;
+#else
+	return 2.0 * rand() / (double) (RAND_MAX);
+#endif
 }
+
 
 void mandelbrot_serial(double x0, double y0, double x1, double y1,
                        int width, int height, int maxIterations)
