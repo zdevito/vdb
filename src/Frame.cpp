@@ -235,7 +235,7 @@ Frame * Frame_init() {
 	f->r = f->g = f->b = .5f;
 	BBox_empty(&f->bounds);
 	f->last_diag = 1.f;
-	Frame_clear(f);
+	Frame_clear(f,false);
 	return f;
 }
 void Frame_refresh(Frame * f, BBox * draw_box) {
@@ -264,7 +264,7 @@ void Frame_refresh(Frame * f, BBox * draw_box) {
 	f->lines.refresh();
 	f->points.refresh();
 }
-void Frame_clear(Frame * f) {
+void Frame_clear(Frame * f,bool reset_bounds) {
 	f->normals_dirty = false;
 	f->normals.clear();
 	f->tris.clear();
@@ -274,6 +274,8 @@ void Frame_clear(Frame * f) {
 	f->low = 0;
 	f->high = INT_MAX;
 	Frame_mark(f);
+	if(reset_bounds)
+		BBox_empty(&f->bounds);
 }
 void Frame_draw(Frame * f, float point_size) {
 	Frame_init_gl();

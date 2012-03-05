@@ -156,7 +156,7 @@ void GLWindow::resetCamera() {
    scroll_delta[0] = scroll_delta[1] = 0;
 }
 void GLWindow::clear() {
-    Frame_clear(frame);
+    Frame_clear(frame,true);
     refresh_posted = 1;
 	redraw();
 }
@@ -331,7 +331,7 @@ bool GLWindow::command(const char * buf) {
 				clear_posted = true;
 				return false;
 			} else {
-				Frame_clear(frame);
+				Frame_clear(frame,false);
 			}
 			break;
 		case 'r':
@@ -378,7 +378,7 @@ void GLWindow::draw() {
 	}
 	
 	if(clear_posted) {
-		Frame_clear(frame);
+		Frame_clear(frame,false);
 		clear_posted = false;
 		//reenable (and flush) the pending events
 		SocketManager_reenableCallbacks();

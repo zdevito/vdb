@@ -21,7 +21,7 @@ typedef struct Frame Frame;
 Frame * Frame_init();
 void Frame_draw(Frame * f, float point_size);
 void Frame_refresh(Frame * f, BBox * b);
-void Frame_clear(Frame * f);
+void Frame_clear(Frame * f, bool reset_bounds);
 void Frame_setColor3(Frame * f, float * r);
 void Frame_addTriangle(Frame * f, float * data); // (x,y,z) x 3
 void Frame_addLine(Frame * f, float * data); // (x,y,z) x 2
