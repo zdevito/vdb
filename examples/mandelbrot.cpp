@@ -50,9 +50,9 @@ static int mandel(double c_re, double c_im, int count) {
 
 double drand() {
 #ifdef __APPLE__
-	return 2.0 * arc4random() / (double) (0xFFFFFFFF) - 1;
+	return arc4random() / (double) (0xFFFFFFFF);
 #else
-	return 2.0 * rand() / (double) (RAND_MAX);
+	return rand() / (double) RAND_MAX;
 #endif
 }
 
