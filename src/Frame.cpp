@@ -9,17 +9,33 @@
 #define NOMINMAX
 #include "Frame.h"
 #include <vector>
-#include <Fl/gl.h>
-#include <Fl/glu.h>
+#include <FL/gl.h>
+#include <FL/glu.h>
 #include <assert.h>
 #include <float.h>
 #include <math.h>
+#include <string.h>
+#include <limits.h>
 
 #ifdef _WIN32
-#include "glext.h"
-#include "wglext.h"
 #pragma comment(lib,"opengl32.lib")
 #pragma comment(lib,"glu32.lib")
+#include "wglext.h"
+#include "glext.h"
+#endif
+
+#ifndef __APPLE__
+
+#ifdef _WIN32
+#define glGetProcAddress(x) wglGetProcAddress(x)
+#endif
+
+#ifdef __linux__
+#include <GL/glx.h>
+#include <GL/glext.h>
+#define glGetProcAddress(x) glXGetProcAddressARB((const GLubyte*) (x))
+#endif
+
 #define OPENGL_PROCS(_) \
 	_(glDeleteBuffers,GLDELETEBUFFERS) \
 	_(glGenBuffers,GLGENBUFFERS) \
@@ -33,7 +49,7 @@ OPENGL_PROCS(DECLARE_FNS)
 
 static void Frame_init_gl() {
 #define DEFINE_FNS(nm,typ) \
-	nm = (PFN##typ##PROC) wglGetProcAddress(#nm); \
+	nm = (PFN##typ##PROC) glGetProcAddress(#nm); \
 	assert(nm != NULL && #nm);
 	OPENGL_PROCS(DEFINE_FNS)
 }

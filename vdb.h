@@ -87,7 +87,7 @@ VDB_CALL int vdb_sample(float p) {
 	if(p >= 1.f)
 		return __vdb.sample_enabled = 1;
 	else {
-#ifdef _WIN32
+#ifndef __APPLE__
 		double r = rand() / (double) RAND_MAX;
 #else
 		double r = arc4random() / (double) 0xFFFFFFFF;
