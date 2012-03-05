@@ -5,19 +5,18 @@
 
 double drand() {
 #ifdef __APPLE__
-	return 2.0 * arc4random() / (double) (0xFFFFFFFF) - 1;
+	return arc4random() / (double) (0xFFFFFFFF);
 #else
-	return 2.0 * rand() / (double) (RAND_MAX);
+	return rand() / (double) RAND_MAX;
 #endif
 }
 
 
-
 int main() {
 	for(int i = 0; i < 10000; i++) {
-		double x = drand();
-		double y = drand();
-		double z = drand();
+		double x = 2*drand()-1;
+		double y = 2*drand()-1;
+		double z = 2*drand()-1;
 		
 		if(x * x + y * y + z * z < 1) {
 			vdb_point(x,y,z);
