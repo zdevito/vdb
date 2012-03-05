@@ -13,8 +13,13 @@ SRC = main.cpp VDBWindow.cpp SocketManager.cpp Frame.cpp trackball.cpp GLWindow.
 OBJS = $(SRC:.cpp=.o)
 EXECUTABLE = vdb
 
+ifeq ($(UNAME), Darwin)
+ARCHIVE = vdb-osx.tar.gz
+else
+ARCHIVE = vdb-linux.tar.gz
+endif
 
-.PHONY:	all purge clean examples
+.PHONY:	all purge clean examples release
 all:	$(EXECUTABLE) examples
 examples:
 	make -C examples
@@ -41,11 +46,18 @@ $(EXECUTABLE):	$(addprefix build/, $(OBJS))
 	
 clean:
 	make -C examples clean
-	rm -rf build/*.o build/*.d
-	rm -f $(EXECUTABLE)
+	rm -rf build/*.o build/*.d build/vdb
+	rm -f $(EXECUTABLE) $(ARCHIVE)
 
 purge: clean
 	rm -rf build/* local/*
+
+$(ARCHIVE):	$(EXECUTABLE) vdb.h README.md
+	mkdir -p build/vdb
+	cp $^ build/vdb/
+	tar czf $@ build/vdb
+
+release:	$(ARCHIVE)
 
 # dependency rules
 DEPENDENCIES = $(patsubst %.cpp,build/%.d,$(SRC))

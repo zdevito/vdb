@@ -1,25 +1,14 @@
 #include "vdb.h"
-#include <stdlib.h>
-#include <math.h>
-
-
-double drand() {
-#ifdef __APPLE__
-	return arc4random() / (double) (0xFFFFFFFF);
-#else
-	return rand() / (double) RAND_MAX;
-#endif
-}
-
-
 int main() {
-	for(int i = 0; i < 10000; i++) {
-		double x = 2*drand()-1;
-		double y = 2*drand()-1;
-		double z = 2*drand()-1;
-		
-		if(x * x + y * y + z * z < 1) {
-			vdb_point(x,y,z);
+	for(int x = 0; x < 10; x++) {
+		for(int y = 0; y < 10; y++) {
+			for(int z = 0; z < 10; z++) {
+				if( (x - 5) * (x - 5) + 
+				    (y - 5) * (y - 5) + 
+				    (z - 5) * (z - 5) < 5 * 5) {
+				    	vdb_point(x,y,z);
+				}
+			}
 		}
 	}
 	return 0;
