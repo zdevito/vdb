@@ -1,7 +1,7 @@
 #include <FL/Fl.H>
 #include <assert.h>
 #include <stdio.h>
-#include <vector.h>
+#include <vector>
 
 #include "SocketManager.h"
 
@@ -72,7 +72,10 @@ static void input_handler(int fd, void * data) {
 	assert(buf->fd == fd);
 	
 	int status = buf->read(); //read up to BUFFER_SIZE data and handle it, this will be called again if there is data left in the FD
-	if(status == 0) {
+	if(status == 0 || status < 0) {
+		if(status < 0) {
+			report_error("read");
+		}
 		Fl::remove_fd(fd);
 		close(fd);
 		for(size_t i = 0; i < buffers.size(); i++) {
@@ -81,9 +84,6 @@ static void input_handler(int fd, void * data) {
 				break;
 			}
 		}
-	} else if(status < 0) {
-		report_error("read");
-		exit(1);
 	} else {
 		const char * line;
 		while(buf->getNextLine(&line)) {

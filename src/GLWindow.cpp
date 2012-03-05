@@ -10,6 +10,7 @@
 #include "SocketManager.h"
 #include <math.h>
 
+
 // single set of interaction flags and states
 static GLint gDollyPanStartPoint[2] = {0, 0};
 static GLfloat gTrackBallRotation [4] = {0.0f, 0.0f, 0.0f, 0.0f};
@@ -40,7 +41,7 @@ GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
 static int readFloats(int n, const char * buf, float * data) {
 	for(int i = 0; i < n; i++) {
 		char * next;
-		data[i] = strtof(buf, &next);
+		data[i] = strtod(buf, &next);
 		if(next == buf) {
 			printf("warning invalid float input: %s, setting to 0\n",buf);
 			return 0;
@@ -52,20 +53,20 @@ static int readFloats(int n, const char * buf, float * data) {
 
 void GLWindow::updateProjection() {
 	GLdouble ratio, radians, wd2;
-	GLdouble left, right, top, bottom, near, far;
+	GLdouble left, right, top, bottom, near_, far_;
 
     
 	// set projection
 	glMatrixMode (GL_PROJECTION);
 	glLoadIdentity ();
 	//near = -camera.viewPos.z - shapeSize * 0.5;
-	near = 0.001;
-	far = 100; //-camera.viewPos.z + shapeSize * 0.5;
-	if (far < 1.0)
-		far = 1.0;
+	near_ = 0.001;
+	far_ = 100; //-camera.viewPos.z + shapeSize * 0.5;
+	if (far_ < 1.0)
+		far_ = 1.0;
 	
 	radians = 0.0174532925 * camera.aperture / 2; // half aperture degrees to radians 
-	wd2 = near * tan(radians);
+	wd2 = near_ * tan(radians);
 	ratio = camera.viewWidth / (float) camera.viewHeight;
 	if (ratio >= 1.0) {
 		left  = -ratio * wd2;
@@ -78,7 +79,7 @@ void GLWindow::updateProjection() {
 		top = wd2 / ratio;
 		bottom = -wd2 / ratio;	
 	}
-	glFrustum (left, right, bottom, top, near, far);
+	glFrustum (left, right, bottom, top, near_, far_);
 }
 
 void GLWindow::updateModelView() {
@@ -150,8 +151,8 @@ void GLWindow::resetCamera() {
    camera.viewUp.y = 1; 
    camera.viewUp.z = 0;
    
-   bzero(worldRotation,sizeof(GLfloat) * 4);
-   bzero(objectRotation,sizeof(GLfloat) * 4);
+   memset(worldRotation,0,sizeof(GLfloat) * 4);
+   memset(objectRotation,0,sizeof(GLfloat) * 4);
    scroll_delta[0] = scroll_delta[1] = 0;
 }
 void GLWindow::clear() {

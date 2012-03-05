@@ -64,6 +64,8 @@ typedef int socklen_t;
 int vdb_close(int i) { return closesocket(i); }
 #endif
 
+static void vdb_report_error();
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -85,19 +87,31 @@ VDB_CALL int vdb_sample(float p) {
 	if(p >= 1.f)
 		return __vdb.sample_enabled = 1;
 	else {
+#ifdef _WIN32
+		double r = rand() / (double) RAND_MAX;
+#else
 		double r = arc4random() / (double) 0xFFFFFFFF;
+#endif
 		return __vdb.sample_enabled = (r < p);
 	}
 }
 
+static void vdb_os_init();
+
+void vdb_exit() {
+	if(__vdb.init_error == 0) {
+		vdb_close(__vdb.fd);
+		__vdb.init_error = 1;
+	}
+}
 VDB_CALL int vdb_init() {
 	if(!__vdb.is_initialized) {
 		__vdb.is_initialized = 1;
 		__vdb.sample_enabled = 1;
-		
+		vdb_os_init();
 		__vdb.fd = socket(AF_INET, SOCK_STREAM, 0);
 		if(__vdb.fd == -1) {
-			perror("vdb");
+			vdb_report_error();
 			__vdb.init_error = 1;
 		} else {
 			struct sockaddr_in serv_name;
@@ -105,9 +119,10 @@ VDB_CALL int vdb_init() {
 			serv_name.sin_addr.s_addr = htonl(0x7F000001L);
 			serv_name.sin_port = htons(10000);
 			if(-1 == connect(__vdb.fd, (struct sockaddr*) &serv_name, sizeof(serv_name))) {
-				perror("vdb");
+				vdb_report_error();
 				__vdb.init_error = 1;
 			}
+			atexit(vdb_exit);
 		}
 	}
 	return __vdb.init_error;
@@ -119,7 +134,7 @@ int vdb_flush() {
 	VDB_INIT;
 	int s = send(__vdb.fd,__vdb.buffer,__vdb.n_bytes,0);
 	if(s != __vdb.n_bytes) {
-		perror("vdb");
+		vdb_report_error();
 		__vdb.init_error = 1;
 	}
 	__vdb.n_bytes = 0;
@@ -241,6 +256,31 @@ VDB_CALL int vdb_color(float r, float g, float b) {
 	return vdb_color(c);
 }
 
+#ifdef _WIN32
+static void vdb_report_error() {
+    int errCode = WSAGetLastError();
+    LPSTR errString = NULL;
+    int size = FormatMessageA( FORMAT_MESSAGE_ALLOCATE_BUFFER |
+                 FORMAT_MESSAGE_FROM_SYSTEM,
+                 0,
+                 errCode,
+                 0,
+                 (LPSTR)&errString,
+                 0,          
+                 0 );             
+     printf( "vdb: %s (%d)\n", errString, errCode);
+     LocalFree( errString );
+}
+static void vdb_os_init() {
+	WSADATA wsaData;
+	if(WSAStartup(MAKEWORD(2,2), &wsaData)) {
+    	exit(1);
+    }
+}
+#else
+static void vdb_os_init() {}
+static void vdb_report_error() { perror("vdb"); }
+#endif
 #undef VDB_INIT
 #undef VDB_CALL
 #undef VDB_BUFFER_SIZE

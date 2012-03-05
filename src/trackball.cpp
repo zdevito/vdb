@@ -51,9 +51,9 @@
 
 #include <math.h>
 
-static const float kTol = 0.001;
-static const float kRad2Deg = 180. / 3.1415927;
-static const float kDeg2Rad = 3.1415927 / 180.;
+static const float kTol = 0.001f;
+static const float kRad2Deg = 180.f / 3.1415927f;
+static const float kDeg2Rad = 3.1415927f / 180.f;
 
 float gRadiusTrackball;
 float gStartPtTrackball[3];

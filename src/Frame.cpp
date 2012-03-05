@@ -6,15 +6,40 @@
  *  Copyright 2012 Stanford. All rights reserved.
  *
  */
-
+#define NOMINMAX
 #include "Frame.h"
-#include <vector.h>
+#include <vector>
 #include <Fl/gl.h>
 #include <Fl/glu.h>
 #include <assert.h>
 #include <float.h>
 #include <math.h>
 
+#ifdef _WIN32
+#include "glext.h"
+#include "wglext.h"
+#pragma comment(lib,"opengl32.lib")
+#pragma comment(lib,"glu32.lib")
+#define OPENGL_PROCS(_) \
+	_(glDeleteBuffers,GLDELETEBUFFERS) \
+	_(glGenBuffers,GLGENBUFFERS) \
+	_(glBindBuffer,GLBINDBUFFER) \
+	_(glBufferData,GLBUFFERDATA) \
+
+#define DECLARE_FNS(nm,typ) \
+	static PFN##typ##PROC nm;
+
+OPENGL_PROCS(DECLARE_FNS)
+
+static void Frame_init_gl() {
+#define DEFINE_FNS(nm,typ) \
+	nm = (PFN##typ##PROC) wglGetProcAddress(#nm); \
+	assert(nm != NULL && #nm);
+	OPENGL_PROCS(DEFINE_FNS)
+}
+#else
+static void Frame_init_gl() {}
+#endif
 void BBox_empty(BBox * b) {
 	for(int i = 0; i < 3; i++)
 		b->data[i] = FLT_MAX;
@@ -96,8 +121,10 @@ struct DisplayBuffer {
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 			
-			glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * pts.size(), &pts[0], GL_STATIC_DRAW);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * idx.size(), &idx[0], GL_STATIC_DRAW);
+			if(pts.size() > 0) {
+				glBufferData(GL_ARRAY_BUFFER, sizeof(Point) * pts.size(), &pts[0], GL_STATIC_DRAW);
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned int) * idx.size(), &idx[0], GL_STATIC_DRAW);
+			}
 			n_elements_in_draw_list = idx.size();
 			dirty = false;
 		}
@@ -199,7 +226,7 @@ void Frame_refresh(Frame * f, BBox * draw_box) {
 	float diag = BBox_diagonal_length(draw_box);
 	if(f->last_diag != diag || f->normals_dirty) {
 		
-		for(int i = 0; i < f->normals.size(); i++) {
+		for(size_t i = 0; i < f->normals.size(); i++) {
 			Normal & n = f->normals[i];
 			Point * p = &f->lines.pts[n.line_idx];
 			float dx = p[1].x - p[0].x;
@@ -233,6 +260,7 @@ void Frame_clear(Frame * f) {
 	Frame_mark(f);
 }
 void Frame_draw(Frame * f, float point_size) {
+	Frame_init_gl();
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	
