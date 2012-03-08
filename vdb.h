@@ -71,7 +71,7 @@ static void vdb_report_error();
 
 #define VDB_BUFFER_SIZE (64*1024)
 //maximum characters in a vdb command
-#define VDB_REDZONE_SIZE 128
+#define VDB_REDZONE_SIZE 512
 static struct {
 	int is_initialized;
 	int init_error; 
