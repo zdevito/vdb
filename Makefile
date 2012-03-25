@@ -7,7 +7,7 @@ FLTK_DIR = build/fltk-1.3.0
 
 CXX = clang++
 FLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --cxxflags)
-LFLAGS = $(shell $(FLTK_CONFIG) --use-gl --ldstaticflags)
+LFLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --ldstaticflags)
 
 SRC = main.cpp VDBWindow.cpp SocketManager.cpp Frame.cpp trackball.cpp GLWindow.cpp
 OBJS = $(SRC:.cpp=.o)

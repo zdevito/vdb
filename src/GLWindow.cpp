@@ -383,6 +383,7 @@ bool GLWindow::command(int client_id,const char * buf) {
 void GLWindow::refresh_legend() {
 	if(legend_color_by != color_by || (color_by > 0 && legend->size() != label_table[color_by-1].names.size())) {
 		if(color_by > 0) {
+			
 			LabelTable & l = label_table[color_by - 1];
 			
 			if(l.names.size() > 0)
@@ -391,12 +392,12 @@ void GLWindow::refresh_legend() {
 				legend->hide();
 				
 			legend->clear();
+			
 			for(int i = 0; i < l.names.size(); i++) {
-				char buf[128];
-				sprintf(buf,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",i+8,string_table.Extern(l.names[i]));
+				char buf[1024];
+				snprintf(buf,1024,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",i+8,string_table.Extern(l.names[i]));
 				legend->add("\t");
 				legend->add(buf);
-				
 			}
 			legend->redraw();
 		} else {
