@@ -8,6 +8,7 @@
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Gl_Window.H>
 #include <FL/gl.h>
+#include <FL/Fl_Browser.H>
 #include "Frame.h"
 #include "StringTable.h"
 #include "LabelTable.h"
@@ -65,6 +66,7 @@ struct GLWindow : public Fl_Gl_Window {
 	void prepareOpenGL(int width, int height);
 	bool command(int client_id, const char * line);
 	void set_color_by(int idx);
+	void refresh_legend();
     GLWindow(int X,int Y,int W,int H);
     
     recCamera camera;
@@ -80,6 +82,8 @@ struct GLWindow : public Fl_Gl_Window {
 	int color_by;
 	std::map< int, ClientState> client_state;
 	LabelTable label_table[LABEL_SIZE];
+	Fl_Browser * legend;
+	int legend_color_by;
 };
 
 #endif

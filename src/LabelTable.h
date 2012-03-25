@@ -33,7 +33,7 @@ struct LabelTable {
 			table[string] = names.size();
 			names.push_back(string);
 		}
-		int idx = table[string] % 20;
+		int idx = table[string] % N_CATEGORY_COLORS;
 		for(int i = 0; i < 3; i++) {
 			result->c[i] = category_colors[idx][i] / 255.f;
 		}

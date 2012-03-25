@@ -28,6 +28,7 @@ GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
     refresh_posted = false;
     clear_posted = false;
     color_by = 0;
+    legend_color_by = 0;
     resetCamera();
 	shapeSize = 7.0f; // max radius of of objects
 	
@@ -163,8 +164,11 @@ void GLWindow::interactive_clear() {
 }
 void GLWindow::clear(bool reset_bb) {
 	Frame_clear(frame,reset_bb);
-	for(int i = 0; i < LABEL_SIZE; i++) {
-		label_table[i].clear();
+	if(reset_bb) {
+		for(int i = 0; i < LABEL_SIZE; i++) {
+			label_table[i].clear();
+		}
+		refresh_legend();
 	}
 }
 
@@ -376,15 +380,37 @@ bool GLWindow::command(int client_id,const char * buf) {
 	}
 	return true;
 }
+void GLWindow::refresh_legend() {
+	if(legend_color_by != color_by || (color_by > 0 && legend->size() != label_table[color_by-1].names.size())) {
+		if(color_by > 0) {
+			LabelTable & l = label_table[color_by - 1];
+			
+			if(l.names.size() > 0)
+				legend->show();
+			else
+				legend->hide();
+				
+			legend->clear();
+			for(int i = 0; i < l.names.size(); i++) {
+				char buf[128];
+				sprintf(buf,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",i+8,string_table.Extern(l.names[i]));
+				legend->add("\t");
+				legend->add(buf);
+				
+			}
+			legend->redraw();
+		} else {
+			legend->hide();
+			legend->clear();
+			legend->redraw();
+		}
+		legend_color_by = color_by;
+	}
+}
 void GLWindow::set_color_by(int c) {
 	color_by = c;
+	refresh_legend();
 	redraw();
-	if(c > 0) {
-		LabelTable & l = label_table[c - 1];
-		for(int i = 0; i < l.names.size(); i++) {
-			printf("%d: %s\n",i,string_table.Extern(l.names[i]));
-		}
-	}
 }
 void GLWindow::draw() {
 	if (!valid()) { valid(1); prepareOpenGL(w(), h()); }      // first time? init
@@ -396,7 +422,7 @@ void GLWindow::draw() {
 	glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	
 	Frame_setVisibleRange(frame, 0, Frame_nObjects(frame) * filter_value);
-	
+	refresh_legend();
 	if(refresh_posted) {
 		Frame_getBBox(frame,&current_bounds);
 		Frame_refresh(frame,&current_bounds);

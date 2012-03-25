@@ -35,19 +35,17 @@ void VDBWindow::slider_changed() {
 	gl->redraw();
 }
 
-VDBWindow::VDBWindow() : Fl_Window(640,480,"vdb") {
-	gl = new GLWindow(0, 0, w(), h()-50);
+VDBWindow::VDBWindow() : Fl_Window(640+180,480,"vdb") {
+	gl = new GLWindow(0, 0, w() - 180, h());
 	
-	Fl_Group * group = new Fl_Group(0,h()-50,w(),50);
+	Fl_Group * group = new Fl_Group(640,0,180,h());
 	
-	point_size = new Fl_Slider(10, h()-30, 160, 20, "Point Size");
+	point_size = new Fl_Slider(640+10, 20, 160, 20, "Point Size");
 	setupSlider(point_size,1,5,5,this);
-	filter_value = new Fl_Slider(170, h()-30, 160 , 20, "Filter");
+	filter_value = new Fl_Slider(640+10, 60, 160 , 20, "Filter");
 	setupSlider(filter_value,0,1,1,this);
 	
-	
-	
-	color_by = new Fl_Choice(340, h() - 30, 100, 20, "Color By");
+	color_by = new Fl_Choice(640+30, 100, 110, 20, "Color By");
 	color_by->align(FL_ALIGN_TOP);
 	color_by->add("vdb_color",0,color_by_wrapper,this);
 	color_by->add("vdb_label",0,color_by_wrapper,this);
@@ -55,17 +53,26 @@ VDBWindow::VDBWindow() : Fl_Window(640,480,"vdb") {
 	color_by->value(0);
 	makePretty(color_by);
 	
-	clear_button = new Fl_Button(450, h() - 40, 40, 30, "Clear");
+	clear_button = new Fl_Button(640+130, h() - 40, 40, 30, "Clear");
 	clear_button->callback(clear_wrapper,gl);
 	makePretty(clear_button);
 	
 	makePretty(this);
+	for(int i = 0; i < N_CATEGORY_COLORS; i++) {
+		Fl::set_color(i+8,category_colors[i][0],category_colors[i][1],category_colors[i][2]);
+	}
 	
+	static int column_widths[] = { 30, 100, 0 };
+	Fl_Browser * b = gl->legend = new Fl_Browser(640+10,130, 160, h() - 130 - 50);
+	b->column_widths(column_widths);
+	b->format_char('@');
+	b->column_char('\t');
+	b->hide();
 	group->end();
 	group->resizable(NULL);
 	
 	this->resizable(gl);
-	this->size_range(500,400);
+	this->size_range(500,480);
 	
 	this->end();
 };

@@ -8,6 +8,7 @@
 #include <FL/Fl_Slider.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_Choice.H>
+#include <FL/Fl_Browser.H>
 
 struct VDBWindow : public Fl_Window {
     GLWindow *gl;          
