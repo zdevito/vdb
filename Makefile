@@ -15,10 +15,10 @@ EXECUTABLE = vdb
 
 
 ifeq ($(UNAME), Darwin)
-ARCHIVE = vdb-osx.tar.gz
+ARCHIVE = vdb-osx
 APPLICATION = $(EXECUTABLE).app
 else
-ARCHIVE = vdb-linux.tar.gz
+ARCHIVE = vdb-linux
 APPLICATION = $(EXECUTABLE)
 endif
 
@@ -55,18 +55,18 @@ $(EXECUTABLE).app:	$(EXECUTABLE)
 	
 clean:
 	make -C examples clean
-	rm -rf build/*.o build/*.d build/vdb
-	rm -rf $(EXECUTABLE) $(ARCHIVE) $(APPLICATION)
+	rm -rf build/*.o build/*.d build/$(ARCHIVE)
+	rm -rf $(EXECUTABLE) $(ARCHIVE).tar.gz $(APPLICATION)
 
 purge: clean
 	rm -rf build/* local/*
 
-$(ARCHIVE):	$(EXECUTABLE) vdb.h README.md
-	mkdir -p build/vdb
-	cp $^ build/vdb/
-	tar czf $@ build/vdb
+$(ARCHIVE).tar.gz:	$(APPLICATION) vdb.h README.md
+	mkdir -p build/$(ARCHIVE)
+	cp -r $^ build/$(ARCHIVE)
+	(cd build; tar czf ../$@ $(ARCHIVE))
 
-release:	$(ARCHIVE)
+release:	$(ARCHIVE).tar.gz
 
 # dependency rules
 DEPENDENCIES = $(patsubst %.cpp,build/%.d,$(SRC))
