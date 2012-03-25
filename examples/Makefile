@@ -1,5 +1,5 @@
 CXX = g++
-FLAGS = -I..
+FLAGS = -I.. -g -Wall
 
 EXAMPLES = $(basename $(wildcard *.cpp))
 all:	$(EXAMPLES)

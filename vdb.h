@@ -137,7 +137,7 @@ VDB_CALL int vdb_init() {
 
 int vdb_flush() {
 	VDB_INIT;
-	int s = send(__vdb.fd,__vdb.buffer,__vdb.n_bytes,0);
+	unsigned int s = send(__vdb.fd,__vdb.buffer,__vdb.n_bytes,0);
 	if(s != __vdb.n_bytes) {
 		vdb_report_error();
 		__vdb.init_error = 1;
@@ -185,12 +185,14 @@ VDB_CALL int vdb_print(char cmd, int N, int stride, int nelems, void * p) {
 
 VDB_CALL int vdb_begin() {
 	__vdb.in_group++;
+	return 0;
 }
 VDB_CALL int vdb_end() {
 	if(__vdb.in_group > 0)
 		__vdb.in_group--;
 	if(__vdb.in_group == 0)
 		vdb_refresh();
+	return 0;
 }
 
 #define VDB_STRINGIFY2(x) #x
@@ -286,6 +288,7 @@ VDB_CALL int vdb_group(int n, const char * lbl) {
 	VDB_INIT;
 	int key = vdb_intern(lbl);
 	vdb_raw_print("g %d %d\n",n,key);
+	return 0;
 }
 
 VDB_CALL int vdb_label(const char * lbl) {
