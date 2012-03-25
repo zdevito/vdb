@@ -21,14 +21,16 @@ static void report_error(const char * name);
 static SocketManagerCallback_t callback_fn;
 static void * callback_data;
 static bool callbacks_paused;
+static int next_client_id = 0;
 
 #define LOCALHOST_IP (0x7F000001L)
 
 #define BUFFER_SIZE (64 * 1024)
 struct Buffer {
-	Buffer(int fd_) {
+	Buffer(int fd_, int client_id_) {
 		start = end = 0;
 		fd = fd_;
+		client_id = client_id_;
 	}
 	int read() {
 		if(start != 0) {
@@ -57,6 +59,7 @@ struct Buffer {
 		} else return false;
 	}
 	int fd;
+	int client_id;
 	size_t start,end;
 	char data[BUFFER_SIZE];
 };
@@ -87,7 +90,7 @@ static void input_handler(int fd, void * data) {
 	} else {
 		const char * line;
 		while(buf->getNextLine(&line)) {
-			if(!callback_fn(line,callback_data)) {
+			if(!callback_fn(buf->client_id,line,callback_data)) {
 				//a display clear has be request with a redraw pending,
 				//we can not handle any more requests until it is fulfilled
 				//at which time SocketManager_reenableCallbacks() will be called
@@ -105,7 +108,7 @@ void SocketManager_reenableCallbacks() {
 	for(size_t i = 0; i < buffers.size(); i++) {
 		const char * line;
 		while(buffers[i]->getNextLine(&line)) {
-			if(!callback_fn(line,callback_data)) {
+			if(!callback_fn(buffers[i]->client_id,line,callback_data)) {
 				callbacks_paused = true;
 				return;
 			}
@@ -124,7 +127,7 @@ static void new_connection(int fd, void * data) {
     if(peer_name.sin_addr.s_addr != htonl(LOCALHOST_IP)) {
     	close(sock2);
     } else {
-    	Buffer * buf = new Buffer(sock2);
+    	Buffer * buf = new Buffer(sock2,next_client_id++);
     	buffers.push_back(buf);
     	Fl::add_fd(sock2, FL_READ, input_handler, buf);
     }

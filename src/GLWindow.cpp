@@ -20,13 +20,14 @@ static GLboolean gTrackball = GL_FALSE;
 static GLboolean gTrackingView = GL_FALSE;
 static recVec gOrigin = {0.0, 0.0, 0.0};
 
-static bool line_callback(const char * line,void *data) {
-	return ((GLWindow*)data)->command(line);
+static bool line_callback(int client_id, const char * line,void *data) {
+	return ((GLWindow*)data)->command(client_id,line);
 }
 
 GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
     refresh_posted = false;
     clear_posted = false;
+    color_by = 0;
     resetCamera();
 	shapeSize = 7.0f; // max radius of of objects
 	
@@ -155,10 +156,16 @@ void GLWindow::resetCamera() {
    memset(objectRotation,0,sizeof(GLfloat) * 4);
    scroll_delta[0] = scroll_delta[1] = 0;
 }
-void GLWindow::clear() {
-    Frame_clear(frame,true);
+void GLWindow::interactive_clear() {
+    clear(true);
     refresh_posted = 1;
 	redraw();
+}
+void GLWindow::clear(bool reset_bb) {
+	Frame_clear(frame,reset_bb);
+	for(int i = 0; i < LABEL_SIZE; i++) {
+		label_table[i].clear();
+	}
 }
 
 void GLWindow::mouseDown(int x, int y) {
@@ -295,8 +302,12 @@ void GLWindow::prepareOpenGL(int width, int height) {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-bool GLWindow::command(const char * buf) {
+bool GLWindow::command(int client_id,const char * buf) {
+	//printf("%s\n",buf);
 	float data[9];
+	ClientState & state = client_state[client_id];
+	Frame_setColor(frame,state.colors);
+	
 	switch(buf[0]) {
 		case 'p':
 			if(readFloats(3, buf+1, data)) {
@@ -310,7 +321,7 @@ bool GLWindow::command(const char * buf) {
 			break;
 		case 'c':
 			if(readFloats(3, buf+1, data)) {
-				Frame_setColor3(frame, data);
+				memcpy(&state.colors[0],data,sizeof(Color));
 			}
 			break;
 		case 'l':
@@ -323,6 +334,27 @@ bool GLWindow::command(const char * buf) {
 				Frame_addNormal(frame, data);
 			}
 			break;
+		case 's': {
+			char * start_lbl;
+			int key = strtol(buf+1,&start_lbl,10);
+			if(start_lbl != buf+1 && *start_lbl != '\0') {
+				start_lbl++;
+				int string = string_table.Intern(start_lbl);
+				state.client_key_to_string[key] = string;
+			} else {
+				printf("warning malformed lbl\n");
+			}
+		} break;
+		case 'g': {
+			if(readFloats(2,buf+1,data)) {
+				unsigned int label = data[0];
+				unsigned int key = data[1];
+				if(label < LABEL_SIZE && state.client_key_to_string.count(key)) {
+					int string = state.client_key_to_string[key];
+					label_table[label].colorFor(string,&state.colors[label+1]);
+				}
+			}
+		} break;
 		case 'f':
 			if(refresh_posted) {
 				//it is unsafe to clear the frame now because we need to redraw it first,
@@ -331,7 +363,7 @@ bool GLWindow::command(const char * buf) {
 				clear_posted = true;
 				return false;
 			} else {
-				Frame_clear(frame,false);
+				clear(false);
 			}
 			break;
 		case 'r':
@@ -344,7 +376,16 @@ bool GLWindow::command(const char * buf) {
 	}
 	return true;
 }
-
+void GLWindow::set_color_by(int c) {
+	color_by = c;
+	redraw();
+	if(c > 0) {
+		LabelTable & l = label_table[c - 1];
+		for(int i = 0; i < l.names.size(); i++) {
+			printf("%d: %s\n",i,string_table.Extern(l.names[i]));
+		}
+	}
+}
 void GLWindow::draw() {
 	if (!valid()) { valid(1); prepareOpenGL(w(), h()); }      // first time? init
 
@@ -370,7 +411,7 @@ void GLWindow::draw() {
 	float scale = 1.f/diag * 5.f;
 	glScalef(scale, scale, scale);
 	glTranslatef(-center[0],-center[1],-center[2]);
-	Frame_draw(frame, point_size);
+	Frame_draw(frame, point_size, color_by);
 	
 	GLenum err = glGetError();
 	if(GL_NO_ERROR != err) {
@@ -378,7 +419,7 @@ void GLWindow::draw() {
 	}
 	
 	if(clear_posted) {
-		Frame_clear(frame,false);
+		clear(false);
 		clear_posted = false;
 		//reenable (and flush) the pending events
 		SocketManager_reenableCallbacks();

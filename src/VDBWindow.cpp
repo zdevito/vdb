@@ -8,7 +8,11 @@ static void slider_changed_wrapper(Fl_Widget *, void * win) {
     ((VDBWindow*) win)->slider_changed();
 }
 static void clear_wrapper(Fl_Widget *, void * win) {
-    ((GLWindow*) win)->clear();
+    ((GLWindow*) win)->interactive_clear();
+}
+static void color_by_wrapper(Fl_Widget *, void * win) {
+	VDBWindow * w = (VDBWindow*)win;
+	w->gl->set_color_by(w->color_by->value());
 }
     
 static void makePretty(Fl_Widget * w) {
@@ -41,7 +45,17 @@ VDBWindow::VDBWindow() : Fl_Window(640,480,"vdb") {
 	filter_value = new Fl_Slider(170, h()-30, 160 , 20, "Filter");
 	setupSlider(filter_value,0,1,1,this);
 	
-	clear_button = new Fl_Button(340, h() - 40, 40, 30, "Clear");
+	
+	
+	color_by = new Fl_Choice(340, h() - 30, 100, 20, "Color By");
+	color_by->align(FL_ALIGN_TOP);
+	color_by->add("vdb_color",0,color_by_wrapper,this);
+	color_by->add("vdb_label",0,color_by_wrapper,this);
+	color_by->add("call site",0,color_by_wrapper,this);
+	color_by->value(0);
+	makePretty(color_by);
+	
+	clear_button = new Fl_Button(450, h() - 40, 40, 30, "Clear");
 	clear_button->callback(clear_wrapper,gl);
 	makePretty(clear_button);
 	
@@ -51,7 +65,7 @@ VDBWindow::VDBWindow() : Fl_Window(640,480,"vdb") {
 	group->resizable(NULL);
 	
 	this->resizable(gl);
-	this->size_range(480,400);
+	this->size_range(500,400);
 	
 	this->end();
 };

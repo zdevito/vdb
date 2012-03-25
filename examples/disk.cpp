@@ -20,11 +20,15 @@ int main() {
 		double r = s0;
 		double t = 2 * M_PI * s1;
 		
+		vdb_label("one");
 		vdb_point(r * sin(t), r * cos(t), 0);
 		r = s0 * s0;
+		vdb_label("two");
 		vdb_point(r * sin(t), r * cos(t), 1);
 		r = sqrt(s0);
+		vdb_label("three");
 		vdb_point(r * sin(t), r * cos(t), 2);
+		
 	}
 	return 0;
 }

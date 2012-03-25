@@ -47,7 +47,7 @@ VDB_CALL int vdb_triangle(float * p);
                  
 VDB_CALL int vdb_color(float * c);
 VDB_CALL int vdb_sample(float p);
- 
+VDB_CALL int vdb_label(const char * lbl); 
 
 //for simplicity all the implementation to interface with vdb is in this header, just include it in your project
 
@@ -69,6 +69,9 @@ static void vdb_report_error();
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <map>
+#include <string>
+
 #define VDB_BUFFER_SIZE (64*1024)
 //maximum characters in a vdb command
 #define VDB_REDZONE_SIZE 512
@@ -80,6 +83,8 @@ static struct {
 	int fd;
 	size_t n_bytes;
 	char buffer[VDB_BUFFER_SIZE];
+	//TODO: remove c++ to make this header c compatible
+	std::map< std::string, int> string_table;
 } __vdb;
 
 
@@ -188,19 +193,27 @@ VDB_CALL int vdb_end() {
 		vdb_refresh();
 }
 
-VDB_CALL int vdb_point(int N, void * p, int stride) {
+#define VDB_STRINGIFY2(x) #x
+#define VDB_STRINGIFY(x) VDB_STRINGIFY2(x)
+
+#define vdb_point(x,y,z) do { \
+	vdb_line(__FILE__ ":" VDB_STRINGIFY(__LINE__)); \
+	vdb_point_fn(x,y,z); \
+} while(0)
+
+VDB_CALL int vdb_point_fn(int N, void * p, int stride) {
 	return vdb_print('p',N,stride,3,p);
 }	
 
-VDB_CALL int vdb_point(int N, float * p) { 
-	return vdb_point(N,p,3*sizeof(float));
+VDB_CALL int vdb_point_fn(int N, float * p) { 
+	return vdb_point_fn(N,p,3*sizeof(float));
 }
-VDB_CALL int vdb_point(float * p) {
-	return vdb_point(1,p);
+VDB_CALL int vdb_point_fn(float * p) {
+	return vdb_point_fn(1,p);
 }
-VDB_CALL int vdb_point(float x, float y, float z) {
+VDB_CALL int vdb_point_fn(float x, float y, float z) {
 	float p[] = {x,y,z};
-	return vdb_point(p);
+	return vdb_point_fn(p);
 }
 
 VDB_CALL int vdb_line(int N, void * p, int stride) {
@@ -254,6 +267,32 @@ VDB_CALL int vdb_color(float * c) {
 VDB_CALL int vdb_color(float r, float g, float b) {
 	float c[] = {r,g,b};
 	return vdb_color(c);
+}
+
+//TODO: check and remove or quote newlines from lbl
+//TODO: limit max size
+VDB_CALL int vdb_intern(const char * lbl) {
+	if(__vdb.string_table.count(lbl) == 0) {
+		int key = __vdb.string_table.size();
+		__vdb.string_table[lbl] = key;
+		vdb_raw_print("s %d %s\n",key,lbl);
+		return key;
+	} else {
+		return __vdb.string_table[lbl];
+	}
+}
+
+VDB_CALL int vdb_group(int n, const char * lbl) {
+	VDB_INIT;
+	int key = vdb_intern(lbl);
+	vdb_raw_print("g %d %d\n",n,key);
+}
+
+VDB_CALL int vdb_label(const char * lbl) {
+	return vdb_group(0,lbl);
+}
+VDB_CALL int vdb_line(const char * lbl) {
+	return vdb_group(1,lbl);
 }
 
 #ifdef _WIN32

@@ -104,9 +104,10 @@ bool BBox_center(BBox * b, float * r) {
 	r[2] = (b->z0 + b->z1) / 2.f;
 	return false;
 }
+
 struct Point {
 	float x,y,z;
-	float r,g,b;
+	Color colors[N_COLOR_GROUPS];
 };
 
 #define OFFSET(typ,field) (&((typ*)NULL)->field)
@@ -145,7 +146,7 @@ struct DisplayBuffer {
 			dirty = false;
 		}
 	}
-	void draw(GLenum mode, size_t begin, size_t end_) {
+	void draw(GLenum mode, int color_group, size_t begin, size_t end_) {
 		size_t end = std::min(end_,n_elements_in_draw_list);
 		if(begin < end) {
 			glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -153,7 +154,7 @@ struct DisplayBuffer {
 			glEnableClientState(GL_VERTEX_ARRAY);
 			glEnableClientState(GL_COLOR_ARRAY);
 			glVertexPointer(3, GL_FLOAT, sizeof(Point), begin * sizeof(Point) + OFFSET(Point,x));
-			glColorPointer(3, GL_FLOAT, sizeof(Point),  begin * sizeof(Point) + OFFSET(Point,r));
+			glColorPointer(3, GL_FLOAT, sizeof(Point),  begin * sizeof(Point) + OFFSET(Point,colors[color_group]));
 			glDrawElements(mode, end - begin, GL_UNSIGNED_INT, NULL);
 		}
 	}
@@ -194,7 +195,7 @@ struct Frame {
 	DisplayBuffer tris;
 	DisplayBuffer lines;
 	DisplayBuffer points;
-	float r,g,b; //current color
+	Color * colors;
 	BBox bounds;
 	float last_diag;
 	bool normals_dirty;
@@ -207,9 +208,8 @@ static void Frame_initPoint(Frame * f, float * data, Point * p) {
 	p->x = data[0];
 	p->y = data[1];
 	p->z = data[2];
-	p->r = f->r;
-	p->g = f->g;
-	p->b = f->b;
+	assert(f->colors);
+	memcpy(&p->colors[0],f->colors, sizeof(Color) * N_COLOR_GROUPS);
 }
 static void Frame_addPoints(Frame * f, DisplayBuffer * buffer, int n, float * ps) {
 	for(int i = 0; i < n; i++) {
@@ -232,7 +232,7 @@ Frame * Frame_init() {
 	f->tris.init();
 	f->lines.init();
 	f->points.init();
-	f->r = f->g = f->b = .5f;
+	f->colors = NULL;
 	BBox_empty(&f->bounds);
 	f->last_diag = 1.f;
 	Frame_clear(f,false);
@@ -277,7 +277,7 @@ void Frame_clear(Frame * f,bool reset_bounds) {
 	if(reset_bounds)
 		BBox_empty(&f->bounds);
 }
-void Frame_draw(Frame * f, float point_size) {
+void Frame_draw(Frame * f, float point_size, int color_group) {
 	Frame_init_gl();
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
@@ -286,16 +286,14 @@ void Frame_draw(Frame * f, float point_size) {
 	Sizes & h = f->history[std::min(f->high,f->history.size() - 1)];
 	
 	glPointSize(point_size);
-	f->tris.draw(GL_TRIANGLES,l.n_tri,h.n_tri);
-	f->lines.draw(GL_LINES,l.n_lines,h.n_lines);
-	f->points.draw(GL_POINTS,l.n_points,h.n_points);
+	f->tris.draw(GL_TRIANGLES,color_group,l.n_tri,h.n_tri);
+	f->lines.draw(GL_LINES,color_group,l.n_lines,h.n_lines);
+	f->points.draw(GL_POINTS,color_group,l.n_points,h.n_points);
 	
 	glPopMatrix();
 }
-void Frame_setColor3(Frame * f, float * r) {
-	f->r = r[0];
-	f->g = r[1];
-	f->b = r[2];
+void Frame_setColor(Frame * f, Color * colors) {
+	f->colors = colors;
 }
 size_t Frame_nObjects(Frame * f) {
 	return f->history.size();
