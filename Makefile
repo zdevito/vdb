@@ -13,14 +13,17 @@ SRC = main.cpp VDBWindow.cpp SocketManager.cpp Frame.cpp trackball.cpp GLWindow.
 OBJS = $(SRC:.cpp=.o)
 EXECUTABLE = vdb
 
+
 ifeq ($(UNAME), Darwin)
 ARCHIVE = vdb-osx.tar.gz
+APPLICATION = $(EXECUTABLE).app
 else
 ARCHIVE = vdb-linux.tar.gz
+APPLICATION = $(EXECUTABLE)
 endif
 
 .PHONY:	all purge clean examples release
-all:	$(EXECUTABLE) examples
+all:	$(APPLICATION) examples
 examples:
 	make -C examples
 
@@ -43,11 +46,17 @@ build/%.o:	src/%.cpp $(FLTK_CONFIG)
 
 $(EXECUTABLE):	$(addprefix build/, $(OBJS))
 	$(CXX) $^ -o $@ $(LFLAGS)
+
+$(EXECUTABLE).app:	$(EXECUTABLE)
+	mkdir -p $@/Contents/Resources $@/Contents/MacOS
+	echo APPLnone > $@/Contents/PkgInfo
+	cp $(EXECUTABLE) $@/Contents/MacOS/$(EXECUTABLE)
+	cp src/info.plist $@/Contents/info.plist
 	
 clean:
 	make -C examples clean
 	rm -rf build/*.o build/*.d build/vdb
-	rm -f $(EXECUTABLE) $(ARCHIVE)
+	rm -rf $(EXECUTABLE) $(ARCHIVE) $(APPLICATION)
 
 purge: clean
 	rm -rf build/* local/*

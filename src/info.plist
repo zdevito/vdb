@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist SYSTEM "file://localhost/System/Library/DTDs/PropertyList.dtd">
+<plist version="0.9">
+<dict>
+        <key>CFBundleName</key>
+        <string>vdb</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleVersion</key>
+        <string>59</string>
+        <key>CFBundleShortVersionString</key>
+        <string>1.1</string>
+        <key>CFBundleIconFile</key>
+        <string>icons.icns</string>
+        <key>CFBundleSignature</key>
+        <string>none</string>
+</dict>
+</plist>
