@@ -28,24 +28,16 @@ VDB_CALL int vdb_flush();
 VDB_CALL int vdb_frame();
 
 
-//utility functions to draw more than 1 object with a single call.
-VDB_CALL int vdb_point(int N, void * p, int stride);
-VDB_CALL int vdb_point(int N, float * p);
-VDB_CALL int vdb_point(float * p);
+//versions that take direct pointers to floating point data
+//this works well if you have a Point or Line struct
+VDB_CALL int vdb_point_v(void * p);
+VDB_CALL int vdb_line_v(void * p);
+VDB_CALL int vdb_normal_v(void * p);
+VDB_CALL int vdb_triangle_v(void * p);                 
+VDB_CALL int vdb_color_v(void * c);
 
-VDB_CALL int vdb_line(int N, void * p, int stride);
-VDB_CALL int vdb_line(int N, float * p);
-VDB_CALL int vdb_line(float * p);
 
-VDB_CALL int vdb_normal(int N, void * p, int stride);
-VDB_CALL int vdb_normal(int N, float * p);
-VDB_CALL int vdb_normal(float * p);
 
-VDB_CALL int vdb_triangle(int N, void * p, int stride);
-VDB_CALL int vdb_triangle(int N, float * p);
-VDB_CALL int vdb_triangle(float * p);
-                 
-VDB_CALL int vdb_color(float * c);
 VDB_CALL int vdb_sample(float p);
 VDB_CALL int vdb_label(const char * lbl); 
 
@@ -195,22 +187,14 @@ VDB_CALL int vdb_end() {
 	return 0;
 }
 
-#define VDB_STRINGIFY2(x) #x
-#define VDB_STRINGIFY(x) VDB_STRINGIFY2(x)
-
-#define vdb_point(x,y,z) do { \
-	vdb_line(__FILE__ ":" VDB_STRINGIFY(__LINE__)); \
-	vdb_point_fn(x,y,z); \
-} while(0)
-
 VDB_CALL int vdb_point_fn(int N, void * p, int stride) {
 	return vdb_print('p',N,stride,3,p);
 }	
 
-VDB_CALL int vdb_point_fn(int N, float * p) { 
+VDB_CALL int vdb_point_fn(int N, void * p) { 
 	return vdb_point_fn(N,p,3*sizeof(float));
 }
-VDB_CALL int vdb_point_fn(float * p) {
+VDB_CALL int vdb_point_fn(void * p) {
 	return vdb_point_fn(1,p);
 }
 VDB_CALL int vdb_point_fn(float x, float y, float z) {
@@ -218,57 +202,57 @@ VDB_CALL int vdb_point_fn(float x, float y, float z) {
 	return vdb_point_fn(p);
 }
 
-VDB_CALL int vdb_line(int N, void * p, int stride) {
+VDB_CALL int vdb_line_fn(int N, void * p, int stride) {
 	return vdb_print('l',N,stride,6,p);
 }
-VDB_CALL int vdb_line(int N, float * p) {
-	return vdb_line(N,p,sizeof(float) * 6);
+VDB_CALL int vdb_line_fn(int N, void * p) {
+	return vdb_line_fn(N,p,sizeof(float) * 6);
 }
-VDB_CALL int vdb_line(float * p) {
-	return vdb_line(1,p);
+VDB_CALL int vdb_line_fn(void * p) {
+	return vdb_line_fn(1,p);
 }
-VDB_CALL int vdb_line(float x0, float y0, float z0, float x1, float y1, float z1) {
+VDB_CALL int vdb_line_fn(float x0, float y0, float z0, float x1, float y1, float z1) {
 	float p[] = {x0,y0,z0,x1,y1,z1};
-	return vdb_line(p);
+	return vdb_line_fn(p);
 }
 
 
-VDB_CALL int vdb_normal(int N, void * p, int stride) {
+VDB_CALL int vdb_normal_fn(int N, void * p, int stride) {
 	return vdb_print('n',N,stride,6,p);
 }
-VDB_CALL int vdb_normal(int N, float * p) {
-	return vdb_normal(N,p,sizeof(float) * 6);
+VDB_CALL int vdb_normal_fn(int N, void * p) {
+	return vdb_normal_fn(N,p,sizeof(float) * 6);
 }
-VDB_CALL int vdb_normal(float * p) {
-	return vdb_normal(1,p);
+VDB_CALL int vdb_normal_fn(void * p) {
+	return vdb_normal_fn(1,p);
 }
-VDB_CALL int vdb_normal(float x0, float y0, float z0, float x1, float y1, float z1) {
+VDB_CALL int vdb_normal_fn(float x0, float y0, float z0, float x1, float y1, float z1) {
 	float p[] = {x0,y0,z0,x1,y1,z1};
-	return vdb_normal(p);
+	return vdb_normal_fn(p);
 }
 
-VDB_CALL int vdb_triangle(int N, void * p, int stride) {
+VDB_CALL int vdb_triangle_fn(int N, void * p, int stride) {
 	return vdb_print('t',N,stride,9,p);
 }
-VDB_CALL int vdb_triangle(int N, float * p) {
-	return vdb_triangle(N,p,sizeof(float) * 9);
+VDB_CALL int vdb_triangle_fn(int N, void * p) {
+	return vdb_triangle_fn(N,p,sizeof(float) * 9);
 }
-int vdb_triangle(float * p) {
-	return vdb_triangle(1,p);
+int vdb_triangle_fn(void * p) {
+	return vdb_triangle_fn(1,p);
 }
-VDB_CALL int vdb_triangle(float x0, float y0, float z0, float x1, float y1, float z1,float x2, float y2, float z2) {
+VDB_CALL int vdb_triangle_fn(float x0, float y0, float z0, float x1, float y1, float z1,float x2, float y2, float z2) {
 	float p[] = {x0,y0,z0,x1,y1,z1,x2,y2,z2};
-	return vdb_triangle(p);
+	return vdb_triangle_fn(p);
 }
 VDB_CALL int vdb_frame() {
 	return vdb_print('f',1,0,0,NULL);
 }
-VDB_CALL int vdb_color(float * c) {
+VDB_CALL int vdb_color_v(void * c) {
 	return vdb_print('c',1,0,3,c);
 }
 VDB_CALL int vdb_color(float r, float g, float b) {
 	float c[] = {r,g,b};
-	return vdb_color(c);
+	return vdb_color_v(c);
 }
 
 //TODO: check and remove or quote newlines from lbl
@@ -294,7 +278,7 @@ VDB_CALL int vdb_group(int n, const char * lbl) {
 VDB_CALL int vdb_label(const char * lbl) {
 	return vdb_group(0,lbl);
 }
-VDB_CALL int vdb_line(const char * lbl) {
+VDB_CALL int vdb_callsite(const char * lbl) {
 	return vdb_group(1,lbl);
 }
 
@@ -323,6 +307,81 @@ static void vdb_os_init() {
 static void vdb_os_init() {}
 static void vdb_report_error() { perror("vdb"); }
 #endif
+
+
+
+//these will be overshadowed by the macros that capture line numbers
+//however, they are useful to have because they will be visible to gdb 
+//so you can call them directly from the debugger
+VDB_CALL int vdb_point_v(void * p) {
+	return vdb_point_fn(p);
+}
+VDB_CALL int vdb_line_v(void * p) {
+	return vdb_line_fn(p);
+}
+VDB_CALL int vdb_normal_v(void * p) {
+	return vdb_normal_fn(p);
+}
+int vdb_triangle_v(void * p) {
+	return vdb_triangle_fn(p);
+}
+
+VDB_CALL int vdb_point(float x, float y, float z) {
+	return vdb_point_fn(x,y,z);
+}
+VDB_CALL int vdb_line(float x0, float y0, float z0, float x1, float y1, float z1) {
+	return vdb_line(x0,y0,z0,x1,y1,z1);
+}
+VDB_CALL int vdb_normal(float x0, float y0, float z0, float x1, float y1, float z1) {
+	return vdb_normal_fn(x0, y0, z0, x1, y1, z1);
+}
+VDB_CALL int vdb_triangle(float x0, float y0, float z0, float x1, float y1, float z1,float x2, float y2, float z2) {
+	return vdb_triangle_fn(x0,y0,z0,x1,y1,z1,x2,y2,z2);
+}
+
+#define VDB_STRINGIFY2(x) #x
+#define VDB_STRINGIFY(x) VDB_STRINGIFY2(x)
+#define VDB_LINE vdb_callsite(__FILE__ ":" VDB_STRINGIFY(__LINE__))
+
+
+#define vdb_point_v(p) do { \
+	VDB_LINE; \
+	vdb_point_fn(p); \
+} while(0)
+
+#define vdb_line_v(p) do { \
+	VDB_LINE; \
+	vdb_line_fn(p); \
+} while(0)
+
+#define vdb_normal_v(p) do { \
+	VDB_LINE; \
+	vdb_normal_fn(p); \
+} while(0)
+
+#define vdb_triangle_v(p) do { \
+	VDB_LINE; \
+	vdb_triangle_fn(p); \
+} while(0)
+
+
+#define vdb_point(x,y,z) do { \
+	VDB_LINE; \
+	vdb_point_fn(x,y,z); \
+} while(0)
+#define vdb_line(x0,y0,z0,x1,y1,z1) do { \
+	VDB_LINE; \
+	vdb_line_fn(x0,y0,z0,x1,y1,z1); \
+} while(0)
+#define vdb_normal(x0, y0, z0, x1, y1, z1) do { \
+	VDB_LINE; \
+	vdb_normal_fn(x0, y0, z0, x1, y1, z1); \
+} while(0)
+#define vdb_triangle(x0,y0,z0,x1,y1,z1,x2,y2,z2) do { \
+	VDB_LINE; \
+	vdb_triangle_fn(x0,y0,z0,x1,y1,z1,x2,y2,z2); \
+} while(0)
+
 #undef VDB_INIT
 #undef VDB_CALL
 #undef VDB_BUFFER_SIZE
