@@ -23,6 +23,16 @@ static recVec gOrigin = {0.0, 0.0, 0.0};
 static bool line_callback(int client_id, const char * line,void *data) {
 	return ((GLWindow*)data)->command(client_id,line);
 }
+static void pause_callback(void * data) {
+	//sometimes even after posting a redraw() with a refresh and then
+	//pausing the callbacks, the redraw will never be fulfilled
+	//this might be an fltk bug or some other race condition
+	
+	//to get around it, the socket manager will call this pause function
+	//which will call redraw, making sure that the screen eventually is redraw
+	//and we can re-enable callbacks.
+	((GLWindow*)data)->redraw();
+}
 
 GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
     refresh_posted = false;
@@ -36,7 +46,7 @@ GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
 	filter_value = 1.0;
 	
 	frame = Frame_init();
-	SocketManager_init(line_callback,this);
+	SocketManager_init(line_callback,pause_callback,this);
     end();
 }
 
@@ -365,6 +375,7 @@ bool GLWindow::command(int client_id,const char * buf) {
 				//we note that we need to clear the screen after the redraw
 				//and disable all new commands until it is done
 				clear_posted = true;
+				//printf("pausing callbacks waiting for refresh\n");
 				return false;
 			} else {
 				clear(false);
@@ -446,6 +457,7 @@ void GLWindow::draw() {
 	}
 	
 	if(clear_posted) {
+		//printf("delayed clear handled, reenableing callbacks\n");
 		clear(false);
 		clear_posted = false;
 		//reenable (and flush) the pending events

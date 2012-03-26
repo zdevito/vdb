@@ -19,6 +19,7 @@ int close(int i) { return closesocket(i); }
 static void report_error(const char * name);
 
 static SocketManagerCallback_t callback_fn;
+static SocketManagerPauseCallback_t pause_fn;
 static void * callback_data;
 static bool callbacks_paused;
 static int next_client_id = 0;
@@ -67,8 +68,10 @@ struct Buffer {
 static std::vector<Buffer*> buffers;
 
 static void input_handler(int fd, void * data) {	
-	if(callbacks_paused)
+	if(callbacks_paused) {
+		pause_fn(callback_data);
 		return;
+	}
 		
 	Buffer * buf = (Buffer *) data;
 	
@@ -167,8 +170,9 @@ static void init_listener() {
 
 static void SocketManager_os_init(); //specific for each OS
 
-void SocketManager_init(SocketManagerCallback_t cb, void *d) {
+void SocketManager_init(SocketManagerCallback_t cb, SocketManagerPauseCallback_t pcb, void *d) {
 	callback_fn = cb;
+	pause_fn = pcb;
 	callback_data = d;
 	SocketManager_os_init();
 	init_listener();
