@@ -40,6 +40,7 @@ VDB_CALL int vdb_color_v(void * c);
 
 VDB_CALL int vdb_sample(float p);
 VDB_CALL int vdb_label(const char * lbl); 
+VDB_CALL int vdb_label(int i); 
 
 //for simplicity all the implementation to interface with vdb is in this header, just include it in your project
 
@@ -48,12 +49,12 @@ VDB_CALL int vdb_label(const char * lbl);
 #include <unistd.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-int vdb_close(int i) { return close(i); }
+VDB_CALL int vdb_close(int i) { return close(i); }
 #else
 #include <WinSock2.h>
 #pragma comment(lib, "Ws2_32.lib")
 typedef int socklen_t;
-int vdb_close(int i) { return closesocket(i); }
+VDB_CALL int vdb_close(int i) { return closesocket(i); }
 #endif
 
 static void vdb_report_error();
@@ -95,7 +96,7 @@ VDB_CALL int vdb_sample(float p) {
 
 static void vdb_os_init();
 
-void vdb_exit() {
+VDB_CALL void vdb_exit() {
 	if(__vdb.init_error == 0) {
 		vdb_close(__vdb.fd);
 		__vdb.init_error = 1;
@@ -136,14 +137,15 @@ VDB_CALL int vdb_init() {
 		vdb_triangle(0,0,0,0,0,0,0,0,0);
 		vdb_color_v(NULL);
 		vdb_color(0,0,0);
-		vdb_label(NULL);
+		vdb_label("");
+		vdb_label(0);
 	}
 	return __vdb.init_error;
 }
 
 #define VDB_INIT do { if(vdb_init()) return 1; } while(0)
 
-int vdb_flush() {
+VDB_CALL int vdb_flush() {
 	VDB_INIT;
 	unsigned int s = send(__vdb.fd,__vdb.buffer,__vdb.n_bytes,0);
 	if(s != __vdb.n_bytes) {
@@ -153,7 +155,7 @@ int vdb_flush() {
 	__vdb.n_bytes = 0;
 	return 0;
 }
-void vdb_raw_print(const char * fmt, ...) {
+VDB_CALL void vdb_raw_print(const char * fmt, ...) {
 	va_list argp;
 	va_start(argp,fmt);
 	__vdb.n_bytes += vsnprintf(__vdb.buffer + __vdb.n_bytes, VDB_BUFFER_SIZE - __vdb.n_bytes,fmt,argp);
@@ -293,6 +295,11 @@ VDB_CALL int vdb_group(int n, const char * lbl) {
 
 VDB_CALL int vdb_label(const char * lbl) {
 	return vdb_group(0,lbl);
+}
+VDB_CALL int vdb_label(int i) {
+	char buf[128];
+	snprintf(buf,128,"%d",i);
+	return vdb_label(buf);
 }
 VDB_CALL int vdb_callsite(const char * lbl) {
 	return vdb_group(1,lbl);
