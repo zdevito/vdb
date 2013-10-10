@@ -1,9 +1,9 @@
 .SUFFIXES:
 UNAME := $(shell uname)
 FLTK_CONFIG = local/bin/fltk-config
-FLTK_TAR = fltk-1.3.0-source.tar.gz
-FLTK_URL = http://ftp.easysw.com/pub/fltk/1.3.0/$(FLTK_TAR)
-FLTK_DIR = build/fltk-1.3.0
+FLTK_TAR = fltk-1.3.2-source.tar.gz
+FLTK_URL = http://fltk.org/pub/fltk/1.3.2/$(FLTK_TAR)
+FLTK_DIR = build/fltk-1.3.2
 
 CXX = clang++
 FLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --cxxflags)
@@ -34,13 +34,13 @@ ifeq ($(UNAME), Darwin)
 else
 	wget $(FLTK_URL) -O build/$(FLTK_TAR)
 endif
-	
+
 $(FLTK_DIR):	build/$(FLTK_TAR)
 	(cd build; tar -xf $(FLTK_TAR))
-	
+
 $(FLTK_CONFIG):	$(FLTK_DIR)
 	(cd $(FLTK_DIR); ./configure --prefix=$(shell pwd)/local; make install)
-	
+
 build/%.o:	src/%.cpp $(FLTK_CONFIG)
 	$(CXX) $(FLAGS) $< -c -o $@
 
@@ -52,7 +52,7 @@ $(EXECUTABLE).app:	$(EXECUTABLE)
 	echo APPLnone > $@/Contents/PkgInfo
 	cp $(EXECUTABLE) $@/Contents/MacOS/$(EXECUTABLE)
 	cp src/info.plist $@/Contents/info.plist
-	
+
 clean:
 	make -C examples clean
 	rm -rf build/*.o build/*.d build/$(ARCHIVE)
@@ -72,5 +72,5 @@ release:	$(ARCHIVE).tar.gz
 DEPENDENCIES = $(patsubst %.cpp,build/%.d,$(SRC))
 build/%.d:	src/%.cpp $(FLTK_CONFIG)
 	@$(CXX) $(FLAGS) -MM -MT '$@ $(@:.d=.o)' $< -o $@
-	
+
 -include $(DEPENDENCIES)
