@@ -49,7 +49,6 @@ VDBWindow::VDBWindow() : Fl_Window(640+180,480,"vdb") {
 	color_by->align(FL_ALIGN_TOP);
 	color_by->add("vdb_color",0,color_by_wrapper,this);
 	color_by->add("vdb_label",0,color_by_wrapper,this);
-	color_by->add("call site",0,color_by_wrapper,this);
 	color_by->value(0);
 	makePretty(color_by);
 	

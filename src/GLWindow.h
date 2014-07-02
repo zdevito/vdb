@@ -26,20 +26,23 @@ struct recCamera {
 	GLint viewWidth, viewHeight; // current window/screen height and width
 };
 
-enum {
-	LABEL_LINE,
-	LABEL_GROUP,
-	LABEL_SIZE
-};
-
 struct ClientState {
 	ClientState() {
+		group = 0;
 		for(int i = 0; i < N_COLOR_GROUPS; i++) {
 			colors[i].r = colors[i].g = colors[i].b = 0.5f;
 		}
 	}
+	std::vector<char *> commands;
 	std::map<int,int> client_key_to_string;
 	Color colors[N_COLOR_GROUPS];
+	int group;
+};
+
+enum ColorBy {
+    CB_COLOR,
+    CB_LABEL,
+    CB_SIZE
 };
 
 struct GLWindow : public Fl_Gl_Window {
@@ -49,7 +52,6 @@ struct GLWindow : public Fl_Gl_Window {
     void resize(int X,int Y,int W,int H);
     
     void interactive_clear();
-    void clear(bool reset_bb);
     int handle(int event);
     void updateProjection();
     void updateModelView();
@@ -64,8 +66,9 @@ struct GLWindow : public Fl_Gl_Window {
 	void mouseDragged(int x, int y);
 	void scrollWheel(int x, int y, int delta_x, int delta_y);
 	void prepareOpenGL(int width, int height);
-	bool command(int client_id, const char * line);
-	void set_color_by(int idx);
+	void draw_command(ClientState & state, const char * line);
+	void command(int client_id, const char * line);
+	void set_color_by(unsigned int idx);
 	void refresh_legend();
     GLWindow(int X,int Y,int W,int H);
     
@@ -79,11 +82,11 @@ struct GLWindow : public Fl_Gl_Window {
 	bool clear_posted;
 	Frame * frame;
 	StringTable string_table;
-	int color_by;
+	ColorBy color_by;
 	std::map< int, ClientState> client_state;
-	LabelTable label_table[LABEL_SIZE];
+	LabelTable label_table;
 	Fl_Browser * legend;
-	int legend_color_by;
+	ColorBy legend_color_by;
 };
 
 #endif

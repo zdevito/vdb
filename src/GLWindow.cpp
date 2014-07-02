@@ -20,25 +20,13 @@ static GLboolean gTrackball = GL_FALSE;
 static GLboolean gTrackingView = GL_FALSE;
 static recVec gOrigin = {0.0, 0.0, 0.0};
 
-static bool line_callback(int client_id, const char * line,void *data) {
-	return ((GLWindow*)data)->command(client_id,line);
-}
-static void pause_callback(void * data) {
-	//sometimes even after posting a redraw() with a refresh and then
-	//pausing the callbacks, the redraw will never be fulfilled
-	//this might be an fltk bug or some other race condition
-	
-	//to get around it, the socket manager will call this pause function
-	//which will call redraw, making sure that the screen eventually is redraw
-	//and we can re-enable callbacks.
-	((GLWindow*)data)->redraw();
+static void line_callback(int client_id, const char * line,void *data) {
+	((GLWindow*)data)->command(client_id,line);
 }
 
 GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
-    refresh_posted = false;
-    clear_posted = false;
-    color_by = 0;
-    legend_color_by = 0;
+    color_by = CB_COLOR;
+    legend_color_by = CB_COLOR;
     resetCamera();
 	shapeSize = 7.0f; // max radius of of objects
 	
@@ -46,7 +34,7 @@ GLWindow::GLWindow(int X,int Y,int W,int H) : Fl_Gl_Window(X,Y,W,H,NULL) {
 	filter_value = 1.0;
 	
 	frame = Frame_init();
-	SocketManager_init(line_callback,pause_callback,this);
+	SocketManager_init(line_callback,this);
     end();
 }
 
@@ -167,19 +155,12 @@ void GLWindow::resetCamera() {
    memset(objectRotation,0,sizeof(GLfloat) * 4);
    scroll_delta[0] = scroll_delta[1] = 0;
 }
+
 void GLWindow::interactive_clear() {
-    clear(true);
-    refresh_posted = 1;
-	redraw();
-}
-void GLWindow::clear(bool reset_bb) {
-	Frame_clear(frame,reset_bb);
-	if(reset_bb) {
-		for(int i = 0; i < LABEL_SIZE; i++) {
-			label_table[i].clear();
-		}
-		refresh_legend();
-	}
+    Frame_clear(frame, true);
+    label_table.clear();
+    refresh_legend();
+    redraw();
 }
 
 void GLWindow::mouseDown(int x, int y) {
@@ -316,14 +297,11 @@ void GLWindow::prepareOpenGL(int width, int height) {
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 }
 
-bool GLWindow::command(int client_id,const char * buf) {
-	//printf("%s\n",buf);
-	float data[9];
-	ClientState & state = client_state[client_id];
-	Frame_setColor(frame,state.colors);
-	
-	switch(buf[0]) {
-		case 'p':
+void GLWindow::draw_command(ClientState & state, const char * buf) {
+    float data[9];
+    Frame_setColor(frame,state.colors);
+    switch(buf[0]) {
+        case 'p':
 			if(readFloats(3, buf+1, data)) {
 				Frame_addPoint(frame, data);
 			}
@@ -360,53 +338,60 @@ bool GLWindow::command(int client_id,const char * buf) {
 			}
 		} break;
 		case 'g': {
-			if(readFloats(2,buf+1,data)) {
-				unsigned int label = data[0];
-				unsigned int key = data[1];
-				if(label < LABEL_SIZE && state.client_key_to_string.count(key)) {
+			if(readFloats(1,buf+1,data)) {
+				unsigned int key = data[0];
+				if(state.client_key_to_string.count(key)) {
 					int string = state.client_key_to_string[key];
-					label_table[label].colorFor(string,&state.colors[label+1]);
+					label_table.colorFor(string,&state.colors[CB_LABEL]);
 				}
 			}
 		} break;
 		case 'f':
-			if(refresh_posted) {
-				//it is unsafe to clear the frame now because we need to redraw it first,
-				//we note that we need to clear the screen after the redraw
-				//and disable all new commands until it is done
-				clear_posted = true;
-				//printf("pausing callbacks waiting for refresh\n");
-				return false;
-			} else {
-				clear(false);
-			}
-			break;
-		case 'r':
-			refresh_posted = true;
-			redraw();
-			break;
+		    Frame_clear(frame,false);
+		    break;
 		default:
 			printf("ignoring unknown command: %c\n",buf[0]);
 			break;
-	}
-	return true;
+    }
 }
+
+void GLWindow::command(int client_id,const char * buf) {
+	ClientState & state = client_state[client_id];
+	switch(buf[0]) {
+	    case 'b':
+	        state.group++;
+	        break;
+	    case 'e':
+	        if(state.group > 0)
+	            state.group--;
+	        break;
+	    default:
+	        state.commands.push_back(strdup(buf));
+	}
+	
+	if(state.group == 0) {
+	    for(size_t i = 0; i < state.commands.size(); i++) {
+	        draw_command(state,state.commands[i]);
+	        free(state.commands[i]);
+	    }
+	    state.commands.clear();
+	    redraw();
+	}
+}
+
 void GLWindow::refresh_legend() {
-	if(legend_color_by != color_by || (color_by > 0 && legend->size() != label_table[color_by-1].names.size())) {
-		if(color_by > 0) {
-			
-			LabelTable & l = label_table[color_by - 1];
-			
-			if(l.names.size() > 0)
+	if(legend_color_by != color_by || (color_by == CB_LABEL && legend->size() != label_table.names.size())) {
+		if(color_by == CB_LABEL) {
+			if(label_table.names.size() > 0)
 				legend->show();
 			else
 				legend->hide();
 				
 			legend->clear();
 			
-			for(int i = 0; i < l.names.size(); i++) {
+			for(int i = 0; i < label_table.names.size(); i++) {
 				char buf[1024];
-				snprintf(buf,1024,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",i+8,string_table.Extern(l.names[i]));
+				snprintf(buf,1024,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",i+8,string_table.Extern(label_table.names[i]));
 				legend->add("\t");
 				legend->add(buf);
 			}
@@ -419,8 +404,9 @@ void GLWindow::refresh_legend() {
 		legend_color_by = color_by;
 	}
 }
-void GLWindow::set_color_by(int c) {
-	color_by = c;
+void GLWindow::set_color_by(unsigned int c) {
+    assert(c < CB_SIZE);
+	color_by = (ColorBy)c;
 	refresh_legend();
 	redraw();
 }
@@ -435,12 +421,9 @@ void GLWindow::draw() {
 	
 	Frame_setVisibleRange(frame, 0, Frame_nObjects(frame) * filter_value);
 	refresh_legend();
-	if(refresh_posted) {
-		Frame_getBBox(frame,&current_bounds);
-		Frame_refresh(frame,&current_bounds);
-		refresh_posted = false;
-	}
-
+	
+	Frame_getBBox(frame,&current_bounds);
+	
 	float diag = BBox_diagonal_length(&current_bounds);
 	if(diag == 0.f)
 		diag = 1.f;
@@ -449,18 +432,10 @@ void GLWindow::draw() {
 	float scale = 1.f/diag * 5.f;
 	glScalef(scale, scale, scale);
 	glTranslatef(-center[0],-center[1],-center[2]);
-	Frame_draw(frame, point_size, color_by);
+	Frame_draw(frame, &current_bounds, point_size, color_by);
 	
 	GLenum err = glGetError();
 	if(GL_NO_ERROR != err) {
 		fprintf(stderr,"gl: %s\n", gluErrorString(err));
-	}
-	
-	if(clear_posted) {
-		//printf("delayed clear handled, reenableing callbacks\n");
-		clear(false);
-		clear_posted = false;
-		//reenable (and flush) the pending events
-		SocketManager_reenableCallbacks();
 	}
 }

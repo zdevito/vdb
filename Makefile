@@ -5,7 +5,7 @@ FLTK_TAR = fltk-1.3.2-source.tar.gz
 FLTK_URL = http://fltk.org/pub/fltk/1.3.2/$(FLTK_TAR)
 FLTK_DIR = build/fltk-1.3.2
 
-CXX = clang++
+CXX = g++
 FLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --cxxflags)
 LFLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --ldstaticflags)
 

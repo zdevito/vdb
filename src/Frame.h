@@ -11,7 +11,7 @@ typedef struct BBox {
 	};
 } BBox;
 
-#define N_COLOR_GROUPS 3
+#define N_COLOR_GROUPS 2
 struct Color {
 	union {
 		float c[3];
@@ -28,8 +28,7 @@ float BBox_diagonal_length(BBox * b);
 bool BBox_center(BBox * b, float * r);
 typedef struct Frame Frame;
 Frame * Frame_init();
-void Frame_draw(Frame * f, float point_size, int grp);
-void Frame_refresh(Frame * f, BBox * b);
+void Frame_draw(Frame * f, BBox * b, float point_size, int grp);
 void Frame_clear(Frame * f, bool reset_bounds);
 void Frame_setColor(Frame * f, Color * colors);
 void Frame_addTriangle(Frame * f, float * data); // (x,y,z) x 3
@@ -41,4 +40,5 @@ void Frame_free(Frame * f);
 void Frame_getBBox(Frame * f, BBox * b);
 size_t Frame_nObjects(Frame * f);
 void Frame_setVisibleRange(Frame * f, size_t l, size_t h);
+
 #endif

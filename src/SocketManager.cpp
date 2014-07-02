@@ -19,9 +19,7 @@ int close(int i) { return closesocket(i); }
 static void report_error(const char * name);
 
 static SocketManagerCallback_t callback_fn;
-static SocketManagerPauseCallback_t pause_fn;
 static void * callback_data;
-static bool callbacks_paused;
 static int next_client_id = 0;
 
 #define LOCALHOST_IP (0x7F000001L)
@@ -67,12 +65,7 @@ struct Buffer {
 
 static std::vector<Buffer*> buffers;
 
-static void input_handler(int fd, void * data) {	
-	if(callbacks_paused) {
-		pause_fn(callback_data);
-		return;
-	}
-		
+static void input_handler(int fd, void * data) {		
 	Buffer * buf = (Buffer *) data;
 	
 	assert(buf->fd == fd);
@@ -93,32 +86,10 @@ static void input_handler(int fd, void * data) {
 	} else {
 		const char * line;
 		while(buf->getNextLine(&line)) {
-			if(!callback_fn(buf->client_id,line,callback_data)) {
-				//a display clear has be request with a redraw pending,
-				//we can not handle any more requests until it is fulfilled
-				//at which time SocketManager_reenableCallbacks() will be called
-				callbacks_paused = true; 
-				return;
-			}
+			callback_fn(buf->client_id,line,callback_data);
 		}
 	}
 }
-
-void SocketManager_reenableCallbacks() {
-	assert(callbacks_paused);
-	callbacks_paused = false;
-	//we may have lines left in the buffers that need to be flushed 
-	for(size_t i = 0; i < buffers.size(); i++) {
-		const char * line;
-		while(buffers[i]->getNextLine(&line)) {
-			if(!callback_fn(buffers[i]->client_id,line,callback_data)) {
-				callbacks_paused = true;
-				return;
-			}
-		}
-	}
-}
-
 static void new_connection(int fd, void * data) {
 	struct sockaddr_in peer_name;
 	socklen_t addrlen = sizeof(peer_name);
@@ -170,9 +141,8 @@ static void init_listener() {
 
 static void SocketManager_os_init(); //specific for each OS
 
-void SocketManager_init(SocketManagerCallback_t cb, SocketManagerPauseCallback_t pcb, void *d) {
+void SocketManager_init(SocketManagerCallback_t cb, void *d) {
 	callback_fn = cb;
-	pause_fn = pcb;
 	callback_data = d;
 	SocketManager_os_init();
 	init_listener();

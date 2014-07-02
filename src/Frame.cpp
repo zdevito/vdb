@@ -238,6 +238,7 @@ Frame * Frame_init() {
 	Frame_clear(f,false);
 	return f;
 }
+
 void Frame_refresh(Frame * f, BBox * draw_box) {
 	float diag = BBox_diagonal_length(draw_box);
 	if(f->last_diag != diag || f->normals_dirty) {
@@ -277,8 +278,9 @@ void Frame_clear(Frame * f,bool reset_bounds) {
 	if(reset_bounds)
 		BBox_empty(&f->bounds);
 }
-void Frame_draw(Frame * f, float point_size, int color_group) {
+void Frame_draw(Frame * f, BBox * draw_box, float point_size, int color_group) {
 	Frame_init_gl();
+	Frame_refresh(f, draw_box);
 	glMatrixMode(GL_MODELVIEW);
 	glPushMatrix();
 	
