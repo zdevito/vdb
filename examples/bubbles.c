@@ -1,9 +1,7 @@
 #include<vdb.h>
 #include<math.h>
 
-void what();
 int main() {
-    what();
     float t = 0.f;
     while(1) {
         float x,y;
