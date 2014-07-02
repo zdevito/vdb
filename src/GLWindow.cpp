@@ -380,7 +380,7 @@ void GLWindow::command(int client_id,const char * buf) {
 }
 
 void GLWindow::refresh_legend() {
-	if(legend_color_by != color_by || (color_by == CB_LABEL && legend->size() != label_table.names.size())) {
+	if(legend_color_by != color_by || (color_by == CB_LABEL && legend->size()/2 != label_table.names.size())) {
 		if(color_by == CB_LABEL) {
 			if(label_table.names.size() > 0)
 				legend->show();
@@ -391,7 +391,7 @@ void GLWindow::refresh_legend() {
 			
 			for(int i = 0; i < label_table.names.size(); i++) {
 				char buf[1024];
-				snprintf(buf,1024,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",i+8,string_table.Extern(label_table.names[i]));
+				snprintf(buf,1024,"@C%d\xE2\x96\x88\xE2\x96\x88\t@C0@.%s\n",(i % N_CATEGORY_COLORS)+8,string_table.Extern(label_table.names[i]));
 				legend->add("\t");
 				legend->add(buf);
 			}
