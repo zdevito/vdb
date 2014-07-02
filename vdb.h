@@ -3,10 +3,8 @@
 
 #ifndef _WIN32
 #define VDB_CALL __attribute__((weak))
-#define VDB_GLOBAL __attribute__((weak))
 #else
 #define VDB_CALL static inline
-#define VDB_GLOBAL static
 #endif
 
 VDB_CALL int vdb_point(float x, float y, float z);
@@ -37,6 +35,8 @@ VDB_CALL int vdb_label_i(int i);
 //for simplicity all the implementation to interface with vdb is in this header, just include it in your project
 
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
 #ifndef _WIN32
 #include <unistd.h>
 #include <sys/socket.h>
@@ -54,12 +54,11 @@ static void vdb_report_error(const char * msg);
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <map>
-#include <string>
-
 #define VDB_BUFFER_SIZE (64*1024)
 //maximum characters in a vdb command
 #define VDB_REDZONE_SIZE 512
+
+
 
 typedef struct {
 	int is_initialized;
@@ -68,10 +67,13 @@ typedef struct {
 	int fd;
 	size_t n_bytes;
 	char buffer[VDB_BUFFER_SIZE];
-	//TODO: remove c++ to make this header c compatible
-	std::map< std::string, int> string_table;
-} __VDBState; 
-VDB_GLOBAL __VDBState __vdb;
+	
+	char ** strings;
+	int strings_N;
+	int strings_allocated;
+} __VDBState;
+
+__VDBState __vdb;
 
 static void vdb_os_init();
 
@@ -163,17 +165,22 @@ VDB_CALL int vdb_color(float r, float g, float b) {
 	return vdb_printf("c %f %f %f\n",r,g,b);
 }
 
-//TODO: check and remove or quote newlines from lbl
-//TODO: limit max size
-VDB_CALL int vdb_intern(const char * lbl) {
-	if(__vdb.string_table.count(lbl) == 0) {
-		int key = __vdb.string_table.size();
-		__vdb.string_table[lbl] = key;
-		vdb_printf("s %d %s\n",key,lbl);
-		return key;
-	} else {
-		return __vdb.string_table[lbl];
-	}
+VDB_CALL int vdb_intern(const char * str) {
+    int i;
+    for(i = 0; i < __vdb.strings_N; i++)
+        if(strcmp(__vdb.strings[i],str) == 0)
+            return i;
+    if(__vdb.strings_N == __vdb.strings_allocated) {
+        if(__vdb.strings_allocated == 0)
+            __vdb.strings_allocated = 16;
+        else
+            __vdb.strings_allocated *= 2;
+        __vdb.strings = (char**) realloc(__vdb.strings,sizeof(char*)*__vdb.strings_allocated); 
+    }
+    __vdb.strings[__vdb.strings_N] = strdup(str);
+    int key = __vdb.strings_N++; 
+    vdb_printf("s %d %s\n",key,str);
+    return key;
 }
 
 VDB_CALL int vdb_label(const char * lbl) {
