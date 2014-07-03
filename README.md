@@ -75,7 +75,7 @@ the objects that you draw.
 Other calls
 -----------
 * `vdb_frame()` start a new frame by clearing the scene. This is useful if you are debugging an animation.
-* `vdb_sample(float prob)` calls between this call and the next call to vdb_sample will only be drawn with probability `prob` (either all the calls are performed or none of them). You can use this to easily subsample a large set of data.
+* `vdb_label(char * label_name)/vdb_label_i(int label_name)` associate a string (or integer) label with all draw commands that follow this one.
 * `vdb_begin()/vdb_end()` calls between begin and end statements will appear atomically on the screen. This is completely optional but can prevent the flickering that might occur if the screen refreshed while you are drawing an object.
 
 Remote debugging

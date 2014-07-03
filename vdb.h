@@ -3,8 +3,18 @@
 
 #ifndef _WIN32
 #define VDB_CALL __attribute__((weak))
+#define STRDUP strdup
+
 #else
-#define VDB_CALL static inline
+#define VDB_CALL static
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#define snprintf sprintf_s
+#define STRDUP _strdup
+
 #endif
 
 VDB_CALL int vdb_point(float x, float y, float z);
@@ -39,6 +49,7 @@ VDB_CALL int vdb_label_i(int i);
 #include <string.h>
 #ifndef _WIN32
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 VDB_CALL int vdb_close(int i) { return close(i); }
@@ -109,8 +120,9 @@ VDB_CALL int vdb_init() {
 #define VDB_INIT do { if(vdb_init()) return 1; } while(0)
 
 VDB_CALL int vdb_flush() {
+	unsigned int s;
 	VDB_INIT;
-	unsigned int s = send(__vdb.fd,__vdb.buffer,__vdb.n_bytes,0);
+	s = send(__vdb.fd,__vdb.buffer,__vdb.n_bytes,0);
 	if(s != __vdb.n_bytes) {
 		vdb_report_error("");
 		__vdb.init_error = 1;
@@ -120,8 +132,8 @@ VDB_CALL int vdb_flush() {
 }
 
 VDB_CALL int vdb_printf(const char * fmt, ...) {
-	VDB_INIT;
 	va_list argp;
+	VDB_INIT;
 	va_start(argp,fmt);
 	__vdb.n_bytes += vsnprintf(__vdb.buffer + __vdb.n_bytes, VDB_BUFFER_SIZE - __vdb.n_bytes,fmt,argp);
 	va_end(argp);
@@ -166,7 +178,7 @@ VDB_CALL int vdb_color(float r, float g, float b) {
 }
 
 VDB_CALL int vdb_intern(const char * str) {
-    int i;
+    int i,key;
     for(i = 0; i < __vdb.strings_N; i++)
         if(strcmp(__vdb.strings[i],str) == 0)
             return i;
@@ -177,15 +189,16 @@ VDB_CALL int vdb_intern(const char * str) {
             __vdb.strings_allocated *= 2;
         __vdb.strings = (char**) realloc(__vdb.strings,sizeof(char*)*__vdb.strings_allocated); 
     }
-    __vdb.strings[__vdb.strings_N] = strdup(str);
-    int key = __vdb.strings_N++; 
+    __vdb.strings[__vdb.strings_N] = STRDUP(str);
+    key = __vdb.strings_N++; 
     vdb_printf("s %d %s\n",key,str);
     return key;
 }
 
 VDB_CALL int vdb_label(const char * lbl) {
+	int key;
 	VDB_INIT;
-	int key = vdb_intern(lbl);
+	key = vdb_intern(lbl);
 	vdb_printf("g %d\n",key);
 	return 0;
 }
@@ -219,7 +232,6 @@ static void vdb_os_init() {
 }
 #else
 static void vdb_os_init() {}
-extern int errno;
 static void vdb_report_error(const char * msg) { fprintf(stderr,"vdb: %s %s\n",msg,strerror(errno)); }
 #endif
 
