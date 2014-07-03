@@ -36,8 +36,8 @@ Using vdb
 1. Download the viewer application and header file, or compile it from
 source:
 
-	* [vdb-osx.tar.gz](https://github.com/downloads/zdevito/vdb/vdb-osx.tar.gz)
-	* [vdb-win.zip](https://github.com/downloads/zdevito/vdb/vdb-win.zip)
+	* [vdb-osx.tar.gz](https://github.com/zdevito/vdb/blob/binaries/vdb-osx.tar.gz?raw=true)
+	* [vdb-win.zip](https://github.com/zdevito/vdb/blob/binaries/vdb-win.zip?raw=true)
 	* [vdb-source.zip](https://github.com/zdevito/vdb/zipball/master)
 
 2. Run the viewer:
