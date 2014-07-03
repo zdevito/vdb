@@ -39,6 +39,7 @@ VDB_CALL int vdb_label_i(int i);
 #include <string.h>
 #ifndef _WIN32
 #include <unistd.h>
+#include <errno.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 VDB_CALL int vdb_close(int i) { return close(i); }
@@ -219,7 +220,6 @@ static void vdb_os_init() {
 }
 #else
 static void vdb_os_init() {}
-extern int errno;
 static void vdb_report_error(const char * msg) { fprintf(stderr,"vdb: %s %s\n",msg,strerror(errno)); }
 #endif
 
