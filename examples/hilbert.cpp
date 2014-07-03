@@ -32,7 +32,7 @@ void rot(int n, int *x, int *y, int rx, int ry) {
 
 
 int main() {
-	size_t N = 512;
+	int N = 512;
 	for(int i = 0; i < N * N - 1; i++) {
 		int x0,y0,x1,y1;
 		d2xy(N,i,&x0,&y0);
