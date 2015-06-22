@@ -1,9 +1,9 @@
 .SUFFIXES:
 UNAME := $(shell uname)
 FLTK_CONFIG = local/bin/fltk-config
-FLTK_TAR = fltk-1.3.2-source.tar.gz
-FLTK_URL = http://fltk.org/pub/fltk/1.3.2/$(FLTK_TAR)
-FLTK_DIR = build/fltk-1.3.2
+FLTK_TAR = fltk-1.3.3-source.tar.gz
+FLTK_URL = http://fltk.org/pub/fltk/1.3.3/$(FLTK_TAR)
+FLTK_DIR = build/fltk-1.3.3
 
 CXX = g++
 FLAGS = -g $(shell $(FLTK_CONFIG) --use-gl --cxxflags)
