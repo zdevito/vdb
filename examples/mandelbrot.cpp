@@ -31,7 +31,7 @@
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.  
 */
 
-#include<vdb.h>
+#include "vdb.h"
 static int mandel(double c_re, double c_im, int count) {
     double z_re = c_re, z_im = c_im;
     int i;
